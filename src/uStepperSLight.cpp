@@ -68,7 +68,7 @@
  *
  * @author     Thomas Hørring Olsen (thomas@ustepper.com)
  */
-#include <uStepper.h>
+#include <uStepperSLight.h>
 #include <math.h>
 
 uStepper *pointer;
@@ -1209,6 +1209,7 @@ void uStepper::setup(	uint8_t mode,
 						float dterm,
 						bool setHome)
 {
+
 	this->mode = mode;
 	
 	this->encoder.setup(mode);

@@ -196,11 +196,11 @@
  * @author     Thomas Hørring Olsen (thomas@ustepper.com)
  */
 
-#ifndef _USTEPPER_H_
-#define _USTEPPER_H_
+#ifndef _USTEPPER_S_LIGHT_H_
+#define _USTEPPER_S_LIGHT_H_
 
 #ifndef __AVR_ATmega328PB__
-#error !!This library only supports the ATmega328p MCU!!
+#error !!This library only supports the ATmega328pb MCU!!
 #endif
 
 #include <inttypes.h>
