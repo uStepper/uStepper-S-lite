@@ -111,7 +111,7 @@ brne _notRdy				;If upper part of delay variable not equal to 0, we should decre
 cpi r18,0					;Check if lower part of delay variable is equal to 0
 brne _notRdy				;If lower part of delay variable not equal to 0, we should decrement delay variable and leave routine
 
-sbi 0x0B,4					;Pull Step pin high, to issue a step
+sbi 0x25,1					;Pull Step pin high, to issue a step
 
 rjmp _rdy
 
@@ -210,7 +210,7 @@ ldd r16,z+HOLD				;Load hold variable into r16
 sbrc r16,0					;If lsb of hold variable is cleared the motor should not block, and we therefore skip next line 
 rjmp _end					;If the lsb of hold variable, is NOT cleared, the motor should block and we jump directly to _end
 
-sbi 0x05,0					;Pull ENA pin high in order to release the motor driver
+sbi 0x2B,4					;Pull ENA pin high in order to release the motor driver
 
 rjmp _end
 
@@ -305,9 +305,9 @@ brne _initDecelAlgorithmStart
 ;If we are done with initialDeceleration part, we should start accelerating in the desired direction 
 ldd r16,z+DIRECTION			;Load direction variable into r16
 sbrs r16,0					;If bit zero is set, we should set DIR pin, and therefore skip next line
-cbi 0x0B,7					;If bit zero is cleared, we should clear DIR pin
+cbi 0x25,2					;If bit zero is cleared, we should clear DIR pin
 sbrc r16,0					;if bit zero is cleared, we should clear DIR pin, and therefore skip next line
-sbi 0x0B,7					;If bit zero is set, we should set DIR pin
+sbi 0x25,2					;If bit zero is set, we should set DIR pin
 
 ldi r19,_ACCEL
 std z+STATE,r19 			;If initDecelSteps is equal to 0, we are done decelerating, and the state should be changed to acceleration
@@ -1421,7 +1421,7 @@ pop r30
 pop r16
 out _SREG,r16
 pop r16
-cbi 0x0B,4				;Pull step pin low, so we are ready to issue next step
+cbi 0x25,1				;Pull step pin low, so we are ready to issue next step
 
 ;Return from interrupt routine
 reti

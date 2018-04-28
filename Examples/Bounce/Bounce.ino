@@ -17,9 +17,6 @@ void loop() {
    
     stepper.moveSteps(3000, !stepper.getCurrentDirection(), HARD);
   }
-   Serial.print("Temperature: ");
-   Serial.print(stepper.temp.getTemp());
-   Serial.println(" Degrees Celsius");
    Serial.print("Angle: ");
    Serial.print(stepper.encoder.getAngle());
    Serial.println(" Degrees");

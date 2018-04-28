@@ -84,16 +84,16 @@ extern "C" {
 		pointer->speedValue[1] = pointer->speedValue[0];
 		pointer->speedValue[0] = micros();
 
-		if((PIND & (0x20)))			//CCW
+		if((PIND & (0x04)))			//CCW
 		{
 			if(pointer->control == 0)
 			{
-				PORTD |= (1 << 7);	//Set dir to CCW
+				PORTB |= (1 << 2);	//Set dir to CCW
 
-				PORTD |= (1 << 4);		//generate step pulse
+				PORTB |= (1 << 1);		//generate step pulse
 
 				pointer->stepsSinceReset--;
-				PORTD &= ~(1 << 4);		//pull step pin low again
+				PORTB &= ~(1 << 1);		//pull step pin low again
 			}		
 			pointer->stepCnt--;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
 		}
@@ -102,11 +102,11 @@ extern "C" {
 			if(pointer->control == 0)
 			{
 				
-				PORTD &= ~(1 << 7);	//Set dir to CW
+				PORTB &= ~(1 << 2);	//Set dir to CW
 
-				PORTD |= (1 << 4);		//generate step pulse
+				PORTB |= (1 << 1);		//generate step pulse
 				pointer->stepsSinceReset++;
-				PORTD &= ~(1 << 4);		//pull step pin low again
+				PORTB &= ~(1 << 1);		//pull step pin low again
 			}
 			pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)	
 		}
@@ -114,14 +114,14 @@ extern "C" {
 
 	void interrupt0(void)
 	{
-		if(PIND & 0x04)
+		if(PIND & 0x08)
 		{
 			
-			PORTB |= (1 << 0);
+			PORTD |= (1 << 4);
 		}
 		else
 		{
-			PORTB &= ~(1 << 0);
+			PORTD &= ~(1 << 4);
 		}
 	}
 
@@ -197,7 +197,7 @@ extern "C" {
 		}
 		else
 		{	
-			PORTD |= (1 << 4);
+			PORTB |= (1 << 1);
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
@@ -215,7 +215,7 @@ extern "C" {
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
-			PORTD &= ~(1 << 4);
+			PORTB &= ~(1 << 1);
 			pointer->counter = 0;
 			if(pointer->control > 0)
 			{
@@ -769,9 +769,9 @@ uStepper::uStepper(void)
 	p = &(this->control);
 	pointer = this;
 
-	DDRD |= (1 << 7);		//set direction pin to output
-	DDRD |= (1 << 4);		//set step pin to output
-	DDRB |= (1 << 0);		//set enable pin to output
+	DDRB |= (1 << 2);		//set direction pin to output
+	DDRB |= (1 << 1);		//set step pin to output
+	DDRD |= (1 << 4);		//set enable pin to output
 }
 
 uStepper::uStepper(float accel, float vel)
@@ -784,9 +784,9 @@ uStepper::uStepper(float accel, float vel)
 	p = &(this->control);
 	pointer = this;
 
-	DDRD |= (1 << 7);		//set direction pin to output
-	DDRD |= (1 << 4);		//set step pin to output
-	DDRB |= (1 << 0);		//set enable pin to output
+	DDRB |= (1 << 2);		//set direction pin to output
+	DDRB |= (1 << 1);		//set step pin to output
+	DDRD |= (1 << 4);		//set enable pin to output
 }
 
 void uStepper::setMaxAcceleration(float accel)
@@ -913,11 +913,11 @@ void uStepper::runContinous(bool dir)
 		this->state = ACCEL;																	//Start accelerating
 		if(dir)																	//Set the motor direction pin to the desired setting
 		{
-			PORTD |= (1 << 7);
+			PORTB |= (1 << 2);
 		}
 		else
 		{
-			PORTD &= ~(1 << 7);
+			PORTB &= ~(1 << 2);
 		}
 		this->accelSteps = (velocity*velocity)/(2.0*acceleration);								//Number of steps to bring the motor to max speed (S = (V^2 - V0^2)/(2*a)))
 		
@@ -1076,11 +1076,11 @@ void uStepper::moveSteps(int32_t steps, bool dir, bool holdMode)
 	{
 		if(dir)																	//Set the motor direction pin to the desired setting
 		{
-			PORTD |= (1 << 7);
+			PORTB |= (1 << 2);
 		}
 		else
 		{
-			PORTD &= ~(1 << 7);
+			PORTB &= ~(1 << 2);
 		}
 		this->state = ACCEL;
 		this->accelSteps = (uint32_t)((this->velocity * this->velocity)/(2.0*this->acceleration));	//Number of steps to bring the motor to max speed (S = (V^2 - V0^2)/(2*a)))
@@ -1288,12 +1288,12 @@ void uStepper::stopTimer(void)
 
 void uStepper::enableMotor(void)
 {
-	PORTB &= ~(1 << 0);				//Enable motor driver
+	PORTD &= ~(1 << 4);				//Enable motor driver
 }
 
 void uStepper::disableMotor(void)
 {
-	PORTB |= (1 << 0);			//Disable motor driver
+	PORTD |= (1 << 4);			//Disable motor driver
 }
 
 bool uStepper::getCurrentDirection(void)
@@ -1601,7 +1601,7 @@ void uStepper::pidDropIn(void)
 
 		oldError = error;		//Save current error for next sample, for use in differential part
 
-		PORTD &= ~(1 << 7);		//change direction to CW
+		PORTB &= ~(1 << 2);		//change direction to CW
 		
 		output *= (float)speed;	//Calculate stepSpeed
 
@@ -1616,7 +1616,7 @@ void uStepper::pidDropIn(void)
 		sei();
 
 		this->startTimer();	
-		PORTB &= ~(1 << 0);
+		PORTD &= ~(1 << 4);
 	}
 
 	else if(error > this->tolerance)
@@ -1634,7 +1634,7 @@ void uStepper::pidDropIn(void)
 
 		oldError = error;
 		
-		PORTD |= (1 << 7);				//change direction to CCW
+		PORTB |= (1 << 2);				//change direction to CCW
 		                  			
 		output *= (float)speed;	//Calculate stepSpeed
 
@@ -1649,7 +1649,7 @@ void uStepper::pidDropIn(void)
 		sei();
 
 		this->startTimer();	
-		PORTB &= ~(1 << 0);
+		PORTD &= ~(1 << 4);
 	}
 	
 	else
@@ -1769,7 +1769,7 @@ void uStepper::pid(void)
 
 		oldError = error;		//Save current error for next sample, for use in differential part
 
-		PORTD &= ~(1 << 7);		//change direction to CW
+		PORTB &= ~(1 << 2);		//change direction to CW
 		
 		output *= (float)speed;
 
@@ -1788,7 +1788,7 @@ void uStepper::pid(void)
 	    sei();
 
 		this->startTimer();	
-		PORTB &= ~(1 << 0);
+		PORTD &= ~(1 << 4);
 	}
 
 	else if(error > this->tolerance)
@@ -1807,7 +1807,7 @@ void uStepper::pid(void)
 
 		oldError = error;
 		
-		PORTD |= (1 << 7);				//change direction to CCW
+		PORTB |= (1 << 2);				//change direction to CCW
 
 		output *= (float)speed;
 
@@ -1827,7 +1827,7 @@ void uStepper::pid(void)
 	    sei();
 
 		this->startTimer();	
-		PORTB &= ~(1 << 0);
+		PORTD &= ~(1 << 4);
 	}
 	
 	else
@@ -1837,20 +1837,20 @@ void uStepper::pid(void)
 			cli();
 			if(this->hold || this->state!=STOP)
 			{
-				PORTB &= ~(1 << 0);
+				PORTD &= ~(1 << 4);
 			}
 			else 
 			{
-				PORTB |= (1 << 0);
+				PORTD |= (1 << 4);
 			}
 
 			if(this->direction)
 			{
-				PORTD |= (1 << 7);		//change direction to CCW
+				PORTB |= (1 << 2);		//change direction to CCW
 			}
 			else
 			{
-				PORTD &= ~(1 << 7);		//change direction to CW
+				PORTB &= ~(1 << 2);		//change direction to CW
 			}
 			if(!running)
 	    	{
