@@ -4,6 +4,21 @@
 	#include <stdlib.h>
 	#include <stdint.h>
 	#include <avr/pgmspace.h>
+	#include <arduino.h>
+
+	#define TMC2208_MAX_VELOCITY      STEPDIR_MAX_VELOCITY
+	#define TMC2208_MAX_ACCELERATION  16777215
+
+	#define ERRORS_VM        (1<<0)
+	#define ERRORS_VM_UNDER  (1<<1)
+	#define ERRORS_VM_OVER   (1<<2)
+
+	#define VM_MIN  50   // VM[V/10] min
+	#define VM_MAX  390  // VM[V/10] max
+
+	#define CRC8_GEN 0x07
+
+	#define TIMEOUT_VALUE 10 // 10 ms
 
 	#define R00 0x00000041
 	#define R10 0x00001F00
@@ -197,8 +212,6 @@
 	#define TMC2208_PWM_GRAD_AUTO_MASK           0xFF0000 // PWM_AUTO // Automatically  determined gradient value
 	#define TMC2208_PWM_GRAD_AUTO_SHIFT          16 // min.: 0, max.: 255, default: 0
 
-	#define REGISTER_COUNT 128
-
 	#define  BIT0   0x00000001
 	#define  BIT1   0x00000002
 	#define  BIT2   0x00000004
@@ -232,84 +245,19 @@
 	#define  BIT30  0x40000000
 	#define  BIT31  0x80000000
 
-	#define	ACCESS_NONE            0
-	#define ACCESS_READ            1
-	#define ACCESS_WRITE           2
-	#define ACCESS_READ_AND_WRITE  3
-	#define ACCESS_READ_OR_WRITE   7
-
-	#define IS_READABLE(x)  (x & ACCESS_READ)
-	#define IS_WRITEABLE(x) (x & ACCESS_WRITE)
-
 	// parameter access
 	#define READ   0
 	#define WRITE  1
 
-	// Min/Max macros
-	#ifndef MIN
-		#define MIN(a,b) ((a<b) ? (a) : (b))
-	#endif
-	#ifndef MAX
-		#define MAX(a,b) ((a>b) ? (a) : (b))
-	#endif
-
 	// Static Array length
 	#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
-
-	// Register read/write/update macros using Mask/Shift:
-	#define FIELD_READ(read, motor, address, mask, shift) \
-		((read(motor, address) & (mask)) >> (shift))
-	#define FIELD_WRITE(write, motor, address, mask, shift, value) \
-		(write(motor, address, ((value)<<(shift)) & (mask)))
-	#define FIELD_UPDATE(read, write, motor, address, mask, shift, value) \
-		(write(motor, address, (read(motor, address) & (~(mask))) | (((value)<<(shift))&(mask))))
-
-	#ifndef UNUSED
-		#define UNUSED(x) (void)(x)
-	#endif
 
 	#ifndef NULL
 		#define NULL ((void *) 0)
 	#endif
 
-	/* Helper Macro: Cast a n bit signed int to a 32 bit signed int
-	 * This is done by checking the MSB of the signed int (Bit n).
-	 * If it is 1, the value is negative and the Bits 32 to n+1 are set to 1
-	 * If it is 0, the value remains unchanged
-	 */
-	#define CAST_Sn_TO_S32(value, n) ((value) | (((value) & (1<<((n)-1)))? ~((0x1<<(n))-1) : 0 ))
-
-	typedef enum {
-		DRIVER_DISABLE,
-		DRIVER_ENABLE,
-		DRIVER_USE_GLOBAL_ENABLE
-	} DriverState;
-
-	typedef enum {
-		CONFIG_READY,
-		CONFIG_RESET,
-		CONFIG_RESTORE
-	} ConfigState;
-
-// structure for configuration mechanism
-	typedef struct
-	{
-		ConfigState       state;
-		uint8_t             configIndex;
-		int32_t             shadowRegister[128];
-		uint8_t (*reset)    (void);
-		uint8_t (*restore)  (void);
-	} ConfigurationTypeDef;
-
-	// Usage note: use 1 TypeDef per IC (LK)
-	typedef struct {
-		int16_t velocity;
-		int16_t oldX;
-		uint32_t oldTick;
-		int32_t registerResetState[REGISTER_COUNT];
-		uint8_t registerAccess[REGISTER_COUNT];
-		//bool vMaxModified;
-	} TMC2208TypeDef;
+	#define BAUD 115200
+	#define MYUBRR 16000000/16/BAUD-1
 
 class Tmc2208
 {
@@ -318,17 +266,14 @@ class Tmc2208
 		void setup(void);
 
 	private:
-		TMC2208TypeDef tmc2208;
-		ConfigurationTypeDef tmc2208Config;
-
-		void tmc2208WriteConfiguration(void);
-		void tmc2208InitConfig(void);
-		void tmc2208PeriodicJob(uint32_t tick);
-		void tmc2208WriteRegister(uint8_t address, int32_t value);
-		void tmc2208ReadRegister(uint8_t address, int32_t *value);
-		uint8_t tmc2208Reset(void);
-		uint8_t tmc2208Restore(void);
-		
+		void writeRegister(uint8_t address, int32_t value);
+		void readRegister(uint8_t address, int32_t *value);
+		uint8_t crc8(const uint8_t *data, uint32_t bytes);
+		void uartInit(void);
+		void uartSendByte(uint8_t value);
+		bool uartReceivePacket(uint8_t *packet, uint8_t size);
+		void disableDriver(void);
+		void enableDriver(void);
 };
 
 #endif
