@@ -11,9 +11,9 @@
 *
 */
 
-#include <uStepper.h>
+#include <uStepperSLite.h>
 
-uStepper stepper;
+uStepperSLite stepper;
 
 void setup(void)
 {

@@ -1,4 +1,4 @@
-#include <uStepper.h>
+#include <uStepperSLite.h>
 
 uStepperServo servo;    //instantiate uStepperServo object
 uint16_t value;

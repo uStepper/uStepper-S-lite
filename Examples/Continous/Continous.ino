@@ -1,9 +1,9 @@
-#include <uStepper.h>
+#include <uStepperSLite.h>
 
 #define MAXACCELERATION 1500         //Max acceleration = 1500 Steps/s^2
 #define MAXVELOCITY 1100           //Max velocity = 1100 steps/s
 
-uStepper stepper(MAXACCELERATION, MAXVELOCITY);
+uStepperSLite stepper(MAXACCELERATION, MAXVELOCITY);
 
 void setup() {
   // put your setup code here, to run once:
