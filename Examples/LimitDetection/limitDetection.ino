@@ -1,11 +1,12 @@
-#include <uStepper.h>
+#include <uStepperSLite.h>
+
 #define MICROSTEP 16//microstep setting of uStepper
 #define RES (200.0*MICROSTEP)/360.0//calculate step pr. degree
 #define STEPPRMM 53.55//step pr. mm for the rail used in the demo
 #define MMPRSTEP 1/STEPPRMM//mm pr. step
 #define MMPRDEG MMPRSTEP*RES//mm pr. degree
 
-uStepper stepper;
+uStepperSLite stepper;
 
 void setup() {
   // put your setup code here, to run once:

@@ -543,7 +543,7 @@ private:
  *             of the uStepper board, by use of a single object.
  */
 
-class uStepper
+class uStepperSLite
 {
 private:
 	//Address offset: 0	
@@ -800,7 +800,7 @@ public:
 	 * @param      vel    - Floating point representation of the maximum
 	 *                    velocity allowed in steps/s.
 	 */
-	uStepper(float accel, float vel);
+	uStepperSLite(float accel, float vel);
 	
 
 	/**
@@ -811,7 +811,7 @@ public:
 	 *             instantiates an object with a maximum acceleration and
 	 *             velocity of 1000 steps/s^2 and 1000 steps/s, respectively.
 	 */
-	uStepper(void);
+	uStepperSLite(void);
 	
 
 	/**

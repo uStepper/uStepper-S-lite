@@ -68,10 +68,10 @@
  *
  * @author     Thomas Hørring Olsen (thomas@ustepper.com)
  */
-#include <uStepperSLight.h>
+#include <uStepperSLite.h>
 #include <math.h>
 
-uStepper *pointer;
+uStepperSLite *pointer;
 volatile int32_t *p __attribute__((used));
 
 
@@ -758,7 +758,7 @@ uint8_t uStepperEncoder::detectMagnet()
 	return 3;						//Something went horribly wrong !
 }
 
-uStepper::uStepper(void)
+uStepperSLite::uStepperSLite(void)
 {
 
 	this->state = STOP;
@@ -774,7 +774,7 @@ uStepper::uStepper(void)
 	DDRD |= (1 << 4);		//set enable pin to output
 }
 
-uStepper::uStepper(float accel, float vel)
+uStepperSLite::uStepperSLite(float accel, float vel)
 {
 	this->state = STOP;
 
@@ -789,7 +789,7 @@ uStepper::uStepper(float accel, float vel)
 	DDRD |= (1 << 4);		//set enable pin to output
 }
 
-void uStepper::setMaxAcceleration(float accel)
+void uStepperSLite::setMaxAcceleration(float accel)
 {
 	this->acceleration = accel;
 
@@ -809,12 +809,12 @@ void uStepper::setMaxAcceleration(float accel)
 	}
 }
 
-float uStepper::getMaxAcceleration(void)
+float uStepperSLite::getMaxAcceleration(void)
 {
 	return this->acceleration;
 }
 
-void uStepper::setMaxVelocity(float vel)
+void uStepperSLite::setMaxVelocity(float vel)
 {
 	if(vel < 0.5005)
 	{
@@ -847,12 +847,12 @@ void uStepper::setMaxVelocity(float vel)
 	}
 }
 
-float uStepper::getMaxVelocity(void)
+float uStepperSLite::getMaxVelocity(void)
 {
 	return this->velocity;
 }
 
-void uStepper::runContinous(bool dir)
+void uStepperSLite::runContinous(bool dir)
 {
 	float curVel;
 
@@ -937,7 +937,7 @@ void uStepper::runContinous(bool dir)
 	this->enableMotor();																			//Enable motor
 }
 
-void uStepper::moveSteps(int32_t steps, bool dir, bool holdMode)
+void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 {
 	float curVel;
 
@@ -1114,7 +1114,7 @@ void uStepper::moveSteps(int32_t steps, bool dir, bool holdMode)
 	this->enableMotor();									//Enable motor driver
 }
 
-void uStepper::hardStop(bool holdMode)
+void uStepperSLite::hardStop(bool holdMode)
 {
 	if(this->mode == DROPIN)
 	{
@@ -1147,7 +1147,7 @@ void uStepper::hardStop(bool holdMode)
 	this->state = STOP;			//Set current state to STOP
 }
 
-void uStepper::softStop(bool holdMode)
+void uStepperSLite::softStop(bool holdMode)
 {
 	float curVel;
 
@@ -1200,7 +1200,7 @@ void uStepper::softStop(bool holdMode)
 	}
 }
 
-void uStepper::setup(	uint8_t mode, 
+void uStepperSLite::setup(	uint8_t mode, 
 						uint8_t microStepping, 
 						float faultTolerance,
 						float faultHysteresis, 
@@ -1273,7 +1273,7 @@ void uStepper::setup(	uint8_t mode,
 	}*/
 }
 
-void uStepper::startTimer(void)
+void uStepperSLite::startTimer(void)
 {
 	while(TCNT2);						//Wait for timer to overflow, to ensure correct timing.
 	TIFR2 |= (1 << OCF2A);				//Clear compare match interrupt flag, if it is set.
@@ -1282,27 +1282,27 @@ void uStepper::startTimer(void)
 	sei();
 }
 
-void uStepper::stopTimer(void)
+void uStepperSLite::stopTimer(void)
 {
 	TIMSK2 &= ~(1 << OCIE2A);			//disable compare match interrupt
 }
 
-void uStepper::enableMotor(void)
+void uStepperSLite::enableMotor(void)
 {
 	PORTD &= ~(1 << 4);				//Enable motor driver
 }
 
-void uStepper::disableMotor(void)
+void uStepperSLite::disableMotor(void)
 {
 	PORTD |= (1 << 4);			//Disable motor driver
 }
 
-bool uStepper::getCurrentDirection(void)
+bool uStepperSLite::getCurrentDirection(void)
 {
 	return this->direction;
 }
 
-bool uStepper::getMotorState(void)
+bool uStepperSLite::getMotorState(void)
 {
 	if(this->mode == PID)
 	{
@@ -1327,7 +1327,7 @@ bool uStepper::getMotorState(void)
 	}
 }
 
-int32_t uStepper::getStepsSinceReset(void)
+int32_t uStepperSLite::getStepsSinceReset(void)
 {
 	if(this->direction == CW)
 	{
@@ -1339,12 +1339,12 @@ int32_t uStepper::getStepsSinceReset(void)
 	}
 }
 
-void uStepper::setCurrent(double current)
+void uStepperSLite::setCurrent(double current)
 {
 	this->pwmD8(current);
 }
 
-void uStepper::pwmD8(double duty)
+void uStepperSLite::pwmD8(double duty)
 {
 	if(!(TCCR1A & (1 << COM1B1)))
 	{
@@ -1366,7 +1366,7 @@ void uStepper::pwmD8(double duty)
 	OCR1B = (uint16_t)(duty + 0.5);
 }
 
-void uStepper::pwmD8(int mode)
+void uStepperSLite::pwmD8(int mode)
 {
 	if(mode == PWM)
 	{
@@ -1383,7 +1383,7 @@ void uStepper::pwmD8(int mode)
 	}
 }
 
-void uStepper::pwmD3(double duty)
+void uStepperSLite::pwmD3(double duty)
 {
 	if(!(TCCR2A & (1 << COM2B1)))
 	{
@@ -1405,7 +1405,7 @@ void uStepper::pwmD3(double duty)
 	OCR2B = (uint16_t)(duty + 0.5);
 }
 
-void uStepper::pwmD3(int mode)
+void uStepperSLite::pwmD3(int mode)
 {
 	if(mode == PWM)
 	{
@@ -1422,7 +1422,7 @@ void uStepper::pwmD3(int mode)
 	}
 }
 
-void uStepper::updateSetPoint(float setPoint)
+void uStepperSLite::updateSetPoint(float setPoint)
 {
 	if(this->mode != DROPIN)
 	{
@@ -1432,7 +1432,7 @@ void uStepper::updateSetPoint(float setPoint)
 	this->stepCnt = (int32_t)(setPoint*this->angleToStep);
 }
 
-float uStepper::moveToEnd(bool dir)
+float uStepperSLite::moveToEnd(bool dir)
 {
 	uint8_t checks = 0;
   	float pos = 0.0;
@@ -1487,7 +1487,7 @@ float uStepper::moveToEnd(bool dir)
   	return lengthMoved;
 }
 
-void uStepper::moveToAngle(float angle, bool holdMode)
+void uStepperSLite::moveToAngle(float angle, bool holdMode)
 {
 	float diff;
 	uint32_t steps;
@@ -1506,7 +1506,7 @@ void uStepper::moveToAngle(float angle, bool holdMode)
 
 }
 
-void uStepper::moveAngle(float angle, bool holdMode)
+void uStepperSLite::moveAngle(float angle, bool holdMode)
 {
 	int32_t steps;
 
@@ -1522,7 +1522,7 @@ void uStepper::moveAngle(float angle, bool holdMode)
 	}
 }
 
-void uStepper::pidDropIn(void)
+void uStepperSLite::pidDropIn(void)
 {
 	static float oldError = 0.0;
 	float integral;
@@ -1667,7 +1667,7 @@ void uStepper::pidDropIn(void)
 	}	
 }
 
-void uStepper::pid(void)
+void uStepperSLite::pid(void)
 {
 	static float oldError = 0.0;
 	float integral;
@@ -1869,7 +1869,7 @@ void uStepper::pid(void)
 	}
 }
 
-bool uStepper::detectStall(float diff, bool running)
+bool uStepperSLite::detectStall(float diff, bool running)
 {
 	static uint16_t accumDiff = 0; 
 	static uint8_t checks = 0;
@@ -1905,7 +1905,7 @@ bool uStepper::detectStall(float diff, bool running)
 	}
 }
 
-bool uStepper::isStalled(void)
+bool uStepperSLite::isStalled(void)
 {
 	return this->stall;
 }
