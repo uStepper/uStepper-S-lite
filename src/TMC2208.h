@@ -4,7 +4,7 @@
 	#include <stdlib.h>
 	#include <stdint.h>
 	#include <avr/pgmspace.h>
-	#include <arduino.h>
+	#include <Arduino.h>
 
 	#define TMC2208_MAX_VELOCITY      STEPDIR_MAX_VELOCITY
 	#define TMC2208_MAX_ACCELERATION  16777215
@@ -256,14 +256,35 @@
 		#define NULL ((void *) 0)
 	#endif
 
-	#define BAUD 115200
-	#define MYUBRR 16000000/16/BAUD-1
+	#define BAUD 115200UL
+
+	#define UARTTXPORT PORTC
+	#define UARTTXDDR DDRC
+	#define UARTTXPIN 3
+
+	#define UARTRXPORT PORTC
+	#define UARTRXDDR DDRC
+	#define UARTRXPIN 2
+
+	// 5us delay (80 nops @ 62.5ns = 5us)
+	#define UARTCLKDELAY() 	__asm__ volatile ( 	"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+							)
 
 class Tmc2208
 {
 	public:
 		Tmc2208(void);
 		void setup(void);
+		void disableDriver(void);
+		void enableDriver(void);
+		void setCurrent(uint8_t percent);
 
 	private:
 		void writeRegister(uint8_t address, int32_t value);
@@ -272,8 +293,6 @@ class Tmc2208
 		void uartInit(void);
 		void uartSendByte(uint8_t value);
 		bool uartReceivePacket(uint8_t *packet, uint8_t size);
-		void disableDriver(void);
-		void enableDriver(void);
 };
 
 #endif

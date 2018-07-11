@@ -96,7 +96,7 @@ void Tmc2208::setup(void)
 	int32_t registerSetting;
 
 	DDRD |= (1 << 4);			//Set Enable as output
-	DDRB |= (1 << 1);			//Set Step pin as output
+	DDRD |= (1 << 7);			//Set Step pin as output
 	DDRB |= (1 << 2);			//Set Dir pin as Output
 	
 	this->uartInit();
@@ -118,17 +118,33 @@ void Tmc2208::disableDriver(void)
 
 void Tmc2208::uartInit(void)
 {
-	UBRR0H = (uint8_t)(MYUBRR >> 8);
-	UBRR0L = (uint8_t)MYUBRR;
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
-	UCSR0A = 0;
-	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
+	UARTRXDDR &= ~(1 << UARTRXPIN);		//Set RX pin as input
+	UARTTXDDR |= (1 << UARTTXPIN);		//Set TX pin as Output
+
+	UARTRXPORT |= (1 << UARTRXPIN);		//Set RX pin pullup enable
+	UARTTXPORT |= (1 << UARTTXPIN);		//Set TX pin high
 }
 
 void Tmc2208::uartSendByte(uint8_t value)
 {
-		while ( !( UCSR0A & (1<<UDRE0)) );
-		UDR0 = value;
+	uint8_t mask = 1;
+	cli();
+
+	//Start bit
+	UARTTXPORT &= ~(1 << UARTTXPIN); UARTCLKDELAY();
+	while(mask)
+	{
+		if (mask & value)
+			UARTTXPORT |= (1 << UARTTXPIN);
+		else
+			UARTTXPORT &= ~(1 << UARTTXPIN);
+		UARTCLKDELAY();
+		mask <<= 1;
+	}
+
+	// Stop bit
+	UARTTXPORT |= (1 << UARTTXPIN);	UARTCLKDELAY();
+	sei();
 }
 
 bool Tmc2208::uartReceivePacket(uint8_t *packet, uint8_t size)
@@ -146,4 +162,27 @@ bool Tmc2208::uartReceivePacket(uint8_t *packet, uint8_t size)
 		}
 		*packet++ = UDR0;
 	}
+}
+
+void Tmc2208::setCurrent(uint8_t percent)
+{
+	int32_t registerSetting = 0;
+
+	if(percent >= 100)
+	{
+		percent = 31;
+	}
+	else if(percent == 0)
+	{
+		//Do nothing
+	}
+	else
+	{
+		percent = ((uint8_t)(float)percent * 0.32) - 1; 
+	}
+
+	registerSetting |= ((int32_t)(percent & 0x1F));
+	registerSetting |= (((int32_t)(percent & 0x1F)) << 8);
+
+	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
 }

@@ -208,6 +208,7 @@
 #include <avr/delay.h>
 #include <Arduino.h>
 #include <uStepperServo.h>
+#include "TMC2208.h"
 
 /** Full step definition*/
 #define FULL 1							
@@ -785,6 +786,9 @@ private:
 public:			
 	/** Instantiate object for the encoder */
 	uStepperEncoder encoder;		
+
+	/** Instantiate object for the Stepper Driver */
+	Tmc2208 driver;
 
 	/**
 	 * @brief      Constructor of uStepper class
