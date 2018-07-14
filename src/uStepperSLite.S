@@ -111,7 +111,7 @@ brne _notRdy				;If upper part of delay variable not equal to 0, we should decre
 cpi r18,0					;Check if lower part of delay variable is equal to 0
 brne _notRdy				;If lower part of delay variable not equal to 0, we should decrement delay variable and leave routine
 
-sbi 0x05,1					;Pull Step pin high, to issue a step
+sbi 0x0B,7					;Pull Step pin high, to issue a step
 
 rjmp _rdy
 
@@ -1421,7 +1421,7 @@ pop r30
 pop r16
 out _SREG,r16
 pop r16
-cbi 0x05,1				;Pull step pin low, so we are ready to issue next step
+cbi 0x0B,7				;Pull step pin low, so we are ready to issue next step
 
 ;Return from interrupt routine
 reti

@@ -5,6 +5,7 @@
 	#include <stdint.h>
 	#include <avr/pgmspace.h>
 	#include <Arduino.h>
+#include <util/delay.h>
 
 	#define TMC2208_MAX_VELOCITY      STEPDIR_MAX_VELOCITY
 	#define TMC2208_MAX_ACCELERATION  16777215
@@ -274,7 +275,12 @@
 												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
 												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
 												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \	
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \	
 												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \																																		
 							)
 
 class Tmc2208
@@ -289,7 +295,7 @@ class Tmc2208
 	private:
 		void writeRegister(uint8_t address, int32_t value);
 		void readRegister(uint8_t address, int32_t *value);
-		uint8_t crc8(const uint8_t *data, uint32_t bytes);
+		uint8_t calcCRC(uint8_t datagram[], uint8_t len);
 		void uartInit(void);
 		void uartSendByte(uint8_t value);
 		bool uartReceivePacket(uint8_t *packet, uint8_t size);

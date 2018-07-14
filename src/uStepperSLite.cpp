@@ -90,10 +90,10 @@ extern "C" {
 			{
 				PORTB |= (1 << 2);	//Set dir to CCW
 
-				PORTB |= (1 << 1);		//generate step pulse
+				PORTD |= (1 << 7);		//generate step pulse
 
 				pointer->stepsSinceReset--;
-				PORTB &= ~(1 << 1);		//pull step pin low again
+				PORTD &= ~(1 << 7);		//pull step pin low again
 			}		
 			pointer->stepCnt--;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
 		}
@@ -104,9 +104,9 @@ extern "C" {
 				
 				PORTB &= ~(1 << 2);	//Set dir to CW
 
-				PORTB |= (1 << 1);		//generate step pulse
+				PORTD |= (1 << 7);		//generate step pulse
 				pointer->stepsSinceReset++;
-				PORTB &= ~(1 << 1);		//pull step pin low again
+				PORTD &= ~(1 << 7);		//pull step pin low again
 			}
 			pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)	
 		}
@@ -114,7 +114,7 @@ extern "C" {
 
 	void interrupt0(void)
 	{
-		if(PIND & 0x08)
+		/*if(PIND & 0x08)
 		{
 			
 			PORTD |= (1 << 4);
@@ -122,7 +122,7 @@ extern "C" {
 		else
 		{
 			PORTD &= ~(1 << 4);
-		}
+		}*/
 	}
 
 	void TIMER2_COMPA_vect(void)
@@ -197,7 +197,7 @@ extern "C" {
 		}
 		else
 		{	
-			PORTB |= (1 << 1);
+			PORTD |= (1 << 7);
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
@@ -215,7 +215,7 @@ extern "C" {
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
 			asm volatile("nop \n\t");
-			PORTB &= ~(1 << 1);
+			PORTD &= ~(1 << 7);
 			pointer->counter = 0;
 			if(pointer->control > 0)
 			{
@@ -770,7 +770,7 @@ uStepperSLite::uStepperSLite(void)
 	pointer = this;
 
 	DDRB |= (1 << 2);		//set direction pin to output
-	DDRB |= (1 << 1);		//set step pin to output
+	DDRD |= (1 << 7);		//set step pin to output
 	DDRD |= (1 << 4);		//set enable pin to output
 }
 
@@ -785,7 +785,7 @@ uStepperSLite::uStepperSLite(float accel, float vel)
 	pointer = this;
 
 	DDRB |= (1 << 2);		//set direction pin to output
-	DDRB |= (1 << 1);		//set step pin to output
+	DDRD |= (1 << 7);		//set step pin to output
 	DDRD |= (1 << 4);		//set enable pin to output
 }
 
@@ -1259,7 +1259,6 @@ void uStepperSLite::setup(	uint8_t mode,
 	OCR2B = 70;
 
 	this->driver.setup();
-	this->driver.setCurrent(30);
 	/*this->enableMotor();
 	this->moveSteps(10,CW,SOFT);
 	while(this->getMotorState())
@@ -1917,9 +1916,9 @@ bool i2cMaster::cmd(uint8_t cmd)
 {
 	uint16_t i = 0;
 	// send command
-	TWCR0 = cmd;
+	TWCR1 = cmd;
 	// wait for command to complete
-	while (!(TWCR0 & (1 << TWINT0)))
+	while (!(TWCR1 & (1 << TWINT1)))
 	{
 		i++;
 		if(i == 65000)
@@ -1929,7 +1928,7 @@ bool i2cMaster::cmd(uint8_t cmd)
 	}
 	
 	// save status bits
-	status = TWSR0 & 0xF8;	
+	status = TWSR1 & 0xF8;	
 
 	return true;
 }
@@ -2017,7 +2016,7 @@ bool i2cMaster::readByte(bool ack, uint8_t *data)
 {
 	if(ack)
 	{
-		if(this->cmd((1 << TWINT0) | (1 << TWEN0) | (1 << TWEA0)) == false)
+		if(this->cmd((1 << TWINT1) | (1 << TWEN1) | (1 << TWEA1)) == false)
 		{
 			return false;
 		}
@@ -2026,13 +2025,13 @@ bool i2cMaster::readByte(bool ack, uint8_t *data)
 	
 	else
 	{
-		if(this->cmd((1 << TWINT0) | (1 << TWEN0)) == false)
+		if(this->cmd((1 << TWINT1) | (1 << TWEN1)) == false)
 		{
 			return false;
 		}
 	}
 
-	*data = TWDR0;
+	*data = TWDR1;
 
 	return true;
 }
@@ -2040,7 +2039,7 @@ bool i2cMaster::readByte(bool ack, uint8_t *data)
 bool i2cMaster::start(uint8_t addr, bool RW)
 {
 	// send START condition
-	this->cmd((1<<TWINT0) | (1<<TWSTA0) | (1<<TWEN0));
+	this->cmd((1<<TWINT1) | (1<<TWSTA1) | (1<<TWEN1));
 
 	if (this->getStatus() != START && this->getStatus() != REPSTART) 
 	{
@@ -2048,8 +2047,8 @@ bool i2cMaster::start(uint8_t addr, bool RW)
 	}
 
 	// send device address and direction
-	TWDR0 = (addr << 1) | RW;
-	this->cmd((1 << TWINT0) | (1 << TWEN0));
+	TWDR1 = (addr << 1) | RW;
+	this->cmd((1 << TWINT1) | (1 << TWEN1));
 	
 	if (RW == READ) 
 	{
@@ -2070,9 +2069,9 @@ bool i2cMaster::restart(uint8_t addr, bool RW)
 
 bool i2cMaster::writeByte(uint8_t data)
 {
-	TWDR0 = data;
+	TWDR1 = data;
 
-	this->cmd((1 << TWINT0) | (1 << TWEN0));
+	this->cmd((1 << TWINT1) | (1 << TWEN1));
 
 	return this->getStatus() == TXDATAACK;
 }
@@ -2081,10 +2080,10 @@ bool i2cMaster::stop(void)
 {
 	uint16_t i = 0;
 	//	issue stop condition
-	TWCR0 = (1 << TWINT0) | (1 << TWEN0) | (1 << TWSTO0);
+	TWCR1 = (1 << TWINT1) | (1 << TWEN1) | (1 << TWSTO1);
 
 	// wait until stop condition is executed and bus released
-	while (TWCR0 & (1 << TWSTO0));
+	while (TWCR1 & (1 << TWSTO1));
 
 	status = I2CFREE;
 
@@ -2099,9 +2098,9 @@ uint8_t i2cMaster::getStatus(void)
 void i2cMaster::begin(void)
 {
 	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
-	TWBR0 = 12;
+	TWBR1 = 12;
 	// no prescaler
-	TWSR0 &= 0xFC;
+	TWSR1 &= 0xFC;
 }
 
 i2cMaster::i2cMaster(void)
