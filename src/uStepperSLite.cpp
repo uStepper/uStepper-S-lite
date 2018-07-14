@@ -75,7 +75,7 @@ uStepperSLite *pointer;
 volatile int32_t *p __attribute__((used));
 
 
-i2cMaster I2C;
+i2cMaster I2C(1);
 
 extern "C" {
 
@@ -293,9 +293,9 @@ extern "C" {
 			pointer->pid();
 			return;
 		}
-		
+		TIMSK1 &= ~(1 << OCIE1A);
 		I2C.read(ENCODERADDR, ANGLE, 2, data);
-		
+		TIMSK1 |= (1 << OCIE1A);
 		curAngle = (((uint16_t)data[0]) << 8 ) | (uint16_t)data[1];
 		pointer->encoder.angle = curAngle;
 		curAngle -= pointer->encoder.encoderOffset;
@@ -698,7 +698,9 @@ void uStepperEncoder::setHome(void)
 {
 	cli();
 	uint8_t data[2];
+	TIMSK1 &= ~(1 << OCIE1A);
 	I2C.read(ENCODERADDR, ANGLE, 2, data);
+	TIMSK1 |= (1 << OCIE1A);
 	this->encoderOffset = (((uint16_t)data[0]) << 8 ) | (uint16_t)data[1];
 
 	pointer->stepsSinceReset = 0;
@@ -717,27 +719,27 @@ float uStepperEncoder::getAngle()
 uint16_t uStepperEncoder::getStrength()
 {
 	uint8_t data[2];
-
+	TIMSK1 &= ~(1 << OCIE1A);
 	I2C.read(ENCODERADDR, MAGNITUDE, 2, data);
-
+	TIMSK1 |= (1 << OCIE1A);
 	return (((uint16_t)data[0]) << 8 )| (uint16_t)data[1];
 }
 
 uint8_t uStepperEncoder::getAgc()
 {
 	uint8_t data;
-
+	TIMSK1 &= ~(1 << OCIE1A);
 	I2C.read(ENCODERADDR, AGC, 1, &data);
-
+	TIMSK1 |= (1 << OCIE1A);
 	return data;
 }
 
 uint8_t uStepperEncoder::detectMagnet()
 {
 	uint8_t data;
-
+	TIMSK1 &= ~(1 << OCIE1A);
 	I2C.read(ENCODERADDR, STATUS, 1, &data);
-
+	TIMSK1 |= (1 << OCIE1A);
 	data &= 0x38;					//For some reason the encoder returns random values on reserved bits. Therefore we make sure reserved bits are cleared before checking the reply !
 
 	if(data == 0x08)
@@ -756,22 +758,6 @@ uint8_t uStepperEncoder::detectMagnet()
 	}
 
 	return 3;						//Something went horribly wrong !
-}
-
-uStepperSLite::uStepperSLite(void)
-{
-
-	this->state = STOP;
-
-	this->setMaxAcceleration(1000.0);
-	this->setMaxVelocity(1000.0);
-
-	p = &(this->control);
-	pointer = this;
-
-	DDRB |= (1 << 2);		//set direction pin to output
-	DDRD |= (1 << 7);		//set step pin to output
-	DDRD |= (1 << 4);		//set enable pin to output
 }
 
 uStepperSLite::uStepperSLite(float accel, float vel)
@@ -1341,87 +1327,73 @@ int32_t uStepperSLite::getStepsSinceReset(void)
 	}
 }
 
-void uStepperSLite::setCurrent(double current)
+void uStepperSLite::setCurrent(float current)
 {
-	this->pwmD8(current);
+	this->driver.setCurrent(current);
 }
 
-void uStepperSLite::pwmD8(double duty)
-{
-	if(!(TCCR1A & (1 << COM1B1)))
-	{
-		pinMode(8,OUTPUT);
-		TCCR1A |= (1 << COM1B1);
-	}
-
-	if(duty > 100.0)
-	{
-		duty = 100.0;
-	}
-	else if(duty < 0.0)
-	{
-		duty = 0.0;
-	}
-
-	duty *= 160.0;
-
-	OCR1B = (uint16_t)(duty + 0.5);
-}
-
-void uStepperSLite::pwmD8(int mode)
-{
-	if(mode == PWM)
-	{
-		if(!(TCCR1A & (1 << COM1B1)))
-		{
-			pinMode(8,OUTPUT);
-			TCCR1A |= (1 << COM1B1);
-		}
-	}
-	else
-	{
-		pinMode(8,INPUT);
-		TCCR1A &= ~(1 << COM1B1);
-	}
-}
-
-void uStepperSLite::pwmD3(double duty)
-{
-	if(!(TCCR2A & (1 << COM2B1)))
-	{
-		pinMode(3,OUTPUT);
-		TCCR2A |= (1 << COM2B1);
-	}
-
-	if(duty > 100.0)
-	{
-		duty = 100.0;
-	}
-	else if(duty < 0.0)
-	{
-		duty = 0.0;
-	}
-
-	duty *= 0.7;
-
-	OCR2B = (uint16_t)(duty + 0.5);
-}
-
-void uStepperSLite::pwmD3(int mode)
+void uStepperSLite::pwmD2(double duty, bool mode)
 {
 	if(mode == PWM)
 	{
 		if(!(TCCR2A & (1 << COM2B1)))
 		{
+			pinMode(2,OUTPUT);
+			TCCR2B |= (1 << COM2B1);
+		}
+	}
+	else
+	{
+		pinMode(2,INPUT);
+		TCCR2A &= ~(1 << COM2B1);
+		return;
+	}
+	
+
+	if(duty > 100.0)
+	{
+		duty = 100.0;
+	}
+	else if(duty < 0.0)
+	{
+		duty = 0.0;
+	}
+
+	duty *= 7.0;
+
+	OCR2B = (uint16_t)(duty + 0.5);
+}
+
+void uStepperSLite::pwmD3(double duty, bool mode)
+{
+	if(mode == PWM)
+	{
+		if(!(TCCR3A & (1 << COM3B1)))
+		{
 			pinMode(3,OUTPUT);
-			TCCR2A |= (1 << COM2B1);
+			TCCR3B |= (1 << COM3B1);
 		}
 	}
 	else
 	{
 		pinMode(3,INPUT);
-		TCCR2A &= ~(1 << COM2B1);
+		TCCR3A &= ~(1 << COM3B1);
+		return;
 	}
+	
+
+	if(duty > 100.0)
+	{
+		duty = 100.0;
+	}
+	else if(duty < 0.0)
+	{
+		duty = 0.0;
+	}
+
+	duty *= 7.0;
+
+	OCR3B = (uint16_t)(duty + 0.5);
 }
 
 void uStepperSLite::updateSetPoint(float setPoint)
@@ -1538,8 +1510,9 @@ void uStepperSLite::pidDropIn(void)
 	static uint32_t oldMicros = 0;
 
 	sei();
-	
+	TIMSK1 &= ~(1 << OCIE1A);
 	I2C.read(ENCODERADDR, ANGLE, 2, data);
+	TIMSK1 |= (1 << OCIE1A);
 	cli();
 		error = (float)this->stepCnt;
 		if(this->speedValue[0] == oldMicros)
@@ -1690,8 +1663,9 @@ void uStepperSLite::pid(void)
 	{
 		return;
 	}
-	
+	TIMSK1 &= ~(1 << OCIE1A);
 	I2C.read(ENCODERADDR, ANGLE, 2, data);
+	TIMSK1 |= (1 << OCIE1A);
 	cli();
 		error = (float)this->stepsSinceReset;
 		if(this->exactDelay.getFloatValue() >= 1.0)
@@ -1910,200 +1884,4 @@ bool uStepperSLite::detectStall(float diff, bool running)
 bool uStepperSLite::isStalled(void)
 {
 	return this->stall;
-}
-
-bool i2cMaster::cmd(uint8_t cmd)
-{
-	uint16_t i = 0;
-	// send command
-	TWCR1 = cmd;
-	// wait for command to complete
-	while (!(TWCR1 & (1 << TWINT1)))
-	{
-		i++;
-		if(i == 65000)
-		{
-			return false;
-		}
-	}
-	
-	// save status bits
-	status = TWSR1 & 0xF8;	
-
-	return true;
-}
-
-bool i2cMaster::read(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uint8_t *data)
-{
-	uint8_t i, buff[numOfBytes];
-
-	TIMSK1 &= ~(1 << OCIE1A);
-
-	if(I2C.start(slaveAddr, WRITE) == false)
-	{
-		I2C.stop();
-		return false;
-	}
-
-	if(I2C.writeByte(regAddr) == false)
-	{
-		I2C.stop();
-		return false;
-	}
-
-	if(I2C.restart(slaveAddr, READ) == false)
-	{
-		I2C.stop();
-		return false;
-	}
-
-	for(i = 0; i < (numOfBytes - 1); i++)
-	{
-		if(I2C.readByte(ACK, &data[i]) == false)
-		{
-			I2C.stop();
-			return false;
-		}	
-	}
-
-	if(I2C.readByte(NACK, &data[numOfBytes-1]) == false)
-	{
-		I2C.stop();
-		return false;
-	}
-
-	I2C.stop();
-
-	TIMSK1 |= (1 << OCIE1A);
-	
-	return 1; 
-}
-
-bool i2cMaster::write(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uint8_t *data)
-{
-	uint8_t i;
-
-	TIMSK1 &= ~(1 << OCIE1A);
-
-	if(I2C.start(slaveAddr, WRITE) == false)
-	{
-		I2C.stop();
-		return false;
-	}
-
-	if(I2C.writeByte(regAddr) == false)
-	{
-		I2C.stop();
-		return false;
-	}
-	
-	for(i = 0; i < numOfBytes; i++)
-	{
-		if(I2C.writeByte(*(data + i)) == false)
-		{
-			I2C.stop();
-			return false;
-		}
-	}
-	I2C.stop();
-
-	TIMSK1 |= (1 << OCIE1A);
-
-	return 1;
-}
-
-bool i2cMaster::readByte(bool ack, uint8_t *data)
-{
-	if(ack)
-	{
-		if(this->cmd((1 << TWINT1) | (1 << TWEN1) | (1 << TWEA1)) == false)
-		{
-			return false;
-		}
-
-	}
-	
-	else
-	{
-		if(this->cmd((1 << TWINT1) | (1 << TWEN1)) == false)
-		{
-			return false;
-		}
-	}
-
-	*data = TWDR1;
-
-	return true;
-}
-
-bool i2cMaster::start(uint8_t addr, bool RW)
-{
-	// send START condition
-	this->cmd((1<<TWINT1) | (1<<TWSTA1) | (1<<TWEN1));
-
-	if (this->getStatus() != START && this->getStatus() != REPSTART) 
-	{
-		return false;
-	}
-
-	// send device address and direction
-	TWDR1 = (addr << 1) | RW;
-	this->cmd((1 << TWINT1) | (1 << TWEN1));
-	
-	if (RW == READ) 
-	{
-
-		return this->getStatus() == RXADDRACK;
-	} 
-
-	else 
-	{
-		return this->getStatus() == TXADDRACK;
-	}
-}
-
-bool i2cMaster::restart(uint8_t addr, bool RW)
-{
-	return this->start(addr, RW);
-}
-
-bool i2cMaster::writeByte(uint8_t data)
-{
-	TWDR1 = data;
-
-	this->cmd((1 << TWINT1) | (1 << TWEN1));
-
-	return this->getStatus() == TXDATAACK;
-}
-
-bool i2cMaster::stop(void)
-{
-	uint16_t i = 0;
-	//	issue stop condition
-	TWCR1 = (1 << TWINT1) | (1 << TWEN1) | (1 << TWSTO1);
-
-	// wait until stop condition is executed and bus released
-	while (TWCR1 & (1 << TWSTO1));
-
-	status = I2CFREE;
-
-	return 1;
-}
-
-uint8_t i2cMaster::getStatus(void)
-{
-	return status;
-}
-
-void i2cMaster::begin(void)
-{
-	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
-	TWBR1 = 12;
-	// no prescaler
-	TWSR1 &= 0xFC;
-}
-
-i2cMaster::i2cMaster(void)
-{
-
 }

@@ -20,7 +20,7 @@ uint8_t Tmc2208::calcCRC(uint8_t datagram[], uint8_t len) {
 void Tmc2208::writeRegister(uint8_t address, int32_t value)
 {
 	uint8_t writeData[8];
-cli();
+	cli();
 	writeData[0] = 0x05;                         // Sync byte
 	writeData[1] = 0x00;                         // Slave address
 	writeData[2] = address | TMC2208_WRITE_BIT;  // Register address with write bit set
@@ -80,19 +80,15 @@ void Tmc2208::setup(void)
 	DDRD |= (1 << 4);			//Set Enable as output
 	DDRD |= (1 << 7);			//Set Step pin as output
 	DDRB |= (1 << 2);			//Set Dir pin as Output
-	
+
 	this->uartInit();
 	registerSetting = R00;
 	registerSetting |= TMC2208_PDN_DISABLE_MASK;
-	//registerSetting |= TMC2208_MSTEP_REG_SELECT_MASK;
 	this->writeRegister(TMC2208_GCONF, registerSetting);
-	//while(1)
-	//{
-		//this->readRegister(TMC2208_GCONF, &registerSetting);
-		this->setCurrent(10);
-		_delay_ms(10);	
-	//}
-	
+	registerSetting = 5000;
+	this->writeRegister(TMC2208_TPWMTHRS, registerSetting);
+	this->setCurrent(25);
+	this->setVelocity(200);	
 }
 
 void Tmc2208::enableDriver(void)
@@ -174,4 +170,20 @@ void Tmc2208::setCurrent(uint8_t percent)
 	registerSetting |= (((int32_t)(percent & 0x1F)) << 8);
 
 	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
+}
+
+void Tmc2208::setVelocity(int32_t RPM)
+{
+	float dummy;
+
+	dummy = (float)RPM;
+	dummy *= 0.01666667;
+
+	dummy *= 3200;
+
+	dummy *= 1.0486;
+
+	RPM = (int32_t)(dummy + 0.5);
+
+	this->writeRegister(TMC2208_VACTUAL, RPM);
 }

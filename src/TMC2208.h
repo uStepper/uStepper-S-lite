@@ -267,20 +267,10 @@
 	#define UARTRXDDR DDRC
 	#define UARTRXPIN 2
 
-	// 5us delay (80 nops @ 62.5ns = 5us)
+	// 2us delay (30 nops @ 62.5ns = 1.875us + C overhead ~ 2us) 500k baud
 	#define UARTCLKDELAY() 	__asm__ volatile ( 	"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
 												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \	
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \	
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \																																		
+												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \																														
 							)
 
 class Tmc2208
@@ -291,6 +281,7 @@ class Tmc2208
 		void disableDriver(void);
 		void enableDriver(void);
 		void setCurrent(uint8_t percent);
+		void setVelocity(int32_t RPM);
 
 	private:
 		void writeRegister(uint8_t address, int32_t value);
