@@ -269,7 +269,7 @@
 #define AGC 0x1A						
 /** Address of the register, in the encoder chip, containing the 8 least significant bits of magnetic field strength measured by the encoder chip */
 #define MAGNITUDE 0x1B					
-
+ 
 /**
  * @brief      Used by dropin feature to take in step pulses
  *

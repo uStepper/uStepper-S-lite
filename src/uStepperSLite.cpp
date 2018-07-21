@@ -318,6 +318,8 @@ extern "C" {
 			deltaAngle -= 4096;
 		}
 
+		pointer->detectStall((float)deltaAngle, pointer->getMotorState());
+
 		if( loops < 10)
 		{
 			loops++;
@@ -1107,6 +1109,8 @@ void uStepperSLite::hardStop(bool holdMode)
 		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
 	}
 
+	this->detectStall(0.0, 0);
+
 	this->stepsSinceReset = (int32_t)(this->encoder.getAngleMoved()*this->angleToStep);
 	this->control = 0;
 
@@ -1847,22 +1851,34 @@ void uStepperSLite::pid(void)
 
 bool uStepperSLite::detectStall(float diff, bool running)
 {
-	static uint16_t accumDiff = 0; 
-	static uint8_t checks = 0;
-	static float oldDiff = 0.0;
+	static uint16_t checks = 0;
 	static float temp = 0.0;
+	uint32_t treshold;
+
+	treshold = (uint32_t)this->exactDelay.getFloatValue();
+	if(treshold == 0)
+	{
+		return;
+	}
+	treshold *= treshold;
+	if(treshold >= 5000)
+	{
+		treshold = 5000;
+	}
 
 	if(running)
 	{
 		temp += diff;
 		checks++;
 
-		if( checks == 100)
+		if( checks >= treshold)
 		{
-			temp *= 0.1;
+			temp /= (float)checks;
 
-			if(temp < 5.0 && temp > -5.0)
+			if(temp < 0.3 && temp > -0.3)
 			{
+				Serial.println(temp);
+				Serial.println(treshold);
 				this->stall = 1;
 			}
 			else

@@ -87,8 +87,8 @@ void Tmc2208::setup(void)
 	this->writeRegister(TMC2208_GCONF, registerSetting);
 	registerSetting = 5000;
 	this->writeRegister(TMC2208_TPWMTHRS, registerSetting);
-	this->setCurrent(25);
-	this->setVelocity(200);	
+	this->setCurrent(75);
+	this->setVelocity(0);	
 }
 
 void Tmc2208::enableDriver(void)
