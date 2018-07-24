@@ -269,8 +269,7 @@
 
 	// 2us delay (30 nops @ 62.5ns = 1.875us + C overhead ~ 2us) 500k baud
 	#define UARTCLKDELAY() 	__asm__ volatile ( 	"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \																														
+												"nop \n\t" "nop \n\t" \																													
 							)
 
 class Tmc2208
