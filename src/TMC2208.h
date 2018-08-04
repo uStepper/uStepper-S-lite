@@ -280,7 +280,7 @@ class Tmc2208
 		void disableDriver(void);
 		void enableDriver(void);
 		void setCurrent(uint8_t percent);
-		void setVelocity(int32_t RPM);
+		void setVelocity(float RPM);
 
 	private:
 		void writeRegister(uint8_t address, int32_t value);

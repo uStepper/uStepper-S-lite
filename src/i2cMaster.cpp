@@ -65,9 +65,7 @@ bool i2cMaster::read(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uin
 
 bool i2cMaster::write(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uint8_t *data)
 {
-	uint8_t i;
-
-	
+	uint8_t i;	
 
 	if(this->start(slaveAddr, WRITE) == false)
 	{
@@ -180,9 +178,15 @@ uint8_t i2cMaster::getStatus(void)
 void i2cMaster::begin(void)
 {
 	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
-	_SFR_MEM8(this->twbr) = 12;
+	_SFR_MEM8(this->twbr) = 1;
 	// no prescaler
 	_SFR_MEM8(this->twsr) &= 0xFC;
+}
+
+void* i2cMaster::operator new(size_t size)
+{
+	void *object = malloc(size);
+	return object;
 }
 
 i2cMaster::i2cMaster(bool channel)

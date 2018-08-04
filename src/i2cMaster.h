@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 #include <avr/io.h>
-
+#include <stdlib.h>
 
 /** I2C bus is not currently in use */
 #define I2CFREE 0						
@@ -78,6 +78,8 @@ class i2cMaster
 		volatile uint8_t twcr;
 		
 	public:
+
+		void* operator new(size_t size);
 
 		/**
 		 * @brief      Constructor

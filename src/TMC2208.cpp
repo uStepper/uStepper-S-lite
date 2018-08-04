@@ -172,7 +172,7 @@ void Tmc2208::setCurrent(uint8_t percent)
 	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
 }
 
-void Tmc2208::setVelocity(int32_t RPM)
+void Tmc2208::setVelocity(float RPM)
 {
 	float dummy;
 
