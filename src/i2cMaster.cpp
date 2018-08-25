@@ -1,5 +1,5 @@
 #include "i2cMaster.h"
-
+#include "Arduino.h"
 bool i2cMaster::cmd(uint8_t cmd)
 {
 	uint16_t i = 0;
@@ -9,8 +9,9 @@ bool i2cMaster::cmd(uint8_t cmd)
 	while (!(_SFR_MEM8(this->twcr) & (1 << TWINT1)))
 	{
 		i++;
-		if(i == 65000)
+		if(i == 300)
 		{
+			Serial.println("abe");
 			return false;
 		}
 	}
@@ -163,7 +164,14 @@ bool i2cMaster::stop(void)
 	_SFR_MEM8(this->twcr) = (1 << TWINT1) | (1 << TWEN1) | (1 << TWSTO1);
 
 	// wait until stop condition is executed and bus released
-	while (_SFR_MEM8(this->twcr) & (1 << TWSTO1));
+	while (_SFR_MEM8(this->twcr) & (1 << TWSTO1))
+	{
+		i++;
+		if(i == 30)
+		{
+			return false;
+		}
+	}
 
 	status = I2CFREE;
 

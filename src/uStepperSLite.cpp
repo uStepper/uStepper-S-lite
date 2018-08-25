@@ -1247,7 +1247,7 @@ void uStepperSLite::setup(	uint8_t mode,
 	TCCR2A |= (1 << WGM21) | (1 << WGM20);				//Switch timer 2 to Fast PWM mode, to enable adjustment of interrupt frequency, while being able to use PWM
 	OCR2A = 70;											//Change top value to 70 in order to obtain an interrupt frequency of 28.571kHz
 	OCR2B = 70;
-
+	
 	this->driver.setup();
 	/*this->enableMotor();
 	this->moveSteps(10,CW,SOFT);
