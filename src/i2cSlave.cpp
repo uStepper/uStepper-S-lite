@@ -9,6 +9,7 @@ extern "C" {
 	{
 		static uint8_t address = 0;
 		static uint8_t bytesRecieved = 0;
+
 	  	switch(TW_STATUS)
 	  	{
 	    case TW_SR_DATA_ACK:
