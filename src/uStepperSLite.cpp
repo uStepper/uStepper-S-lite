@@ -81,6 +81,20 @@ extern "C" {
 
 	void interrupt1(void)
 	{
+		Serial.println("1");
+		if(PIND & 0x08)
+		{
+			PORTD |= (1 << 4);
+		}
+		else
+		{
+			PORTD &= ~(1 << 4);
+		}
+	}
+
+	void interrupt0(void)
+	{
+		Serial.println("0");
 		pointer->speedValue[1] = pointer->speedValue[0];
 		pointer->speedValue[0] = micros();
 
@@ -110,19 +124,6 @@ extern "C" {
 			}
 			pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)	
 		}
-	}
-
-	void interrupt0(void)
-	{
-		/*if(PIND & 0x08)
-		{
-			
-			PORTD |= (1 << 4);
-		}
-		else
-		{
-			PORTD &= ~(1 << 4);
-		}*/
 	}
 
 	void TIMER2_COMPA_vect(void)
@@ -1227,8 +1228,8 @@ void uStepperSLite::setup(	uint8_t mode,
 			digitalWrite(2,HIGH);
 			digitalWrite(3,HIGH);
 			digitalWrite(4,HIGH);
-			attachInterrupt(digitalPinToInterrupt(2), interrupt0, CHANGE);
-			attachInterrupt(digitalPinToInterrupt(3), interrupt1, FALLING);
+			attachInterrupt(0, interrupt0, FALLING);
+			attachInterrupt(1, interrupt1, CHANGE);
 		}		
 		this->tolerance = faultTolerance;		//Number of steps missed before controller kicks in
 		this->hysteresis = faultHysteresis;
@@ -1247,7 +1248,7 @@ void uStepperSLite::setup(	uint8_t mode,
 	TCCR2A |= (1 << WGM21) | (1 << WGM20);				//Switch timer 2 to Fast PWM mode, to enable adjustment of interrupt frequency, while being able to use PWM
 	OCR2A = 70;											//Change top value to 70 in order to obtain an interrupt frequency of 28.571kHz
 	OCR2B = 70;
-	
+	sei();
 	this->driver.setup();
 	/*this->enableMotor();
 	this->moveSteps(10,CW,SOFT);
