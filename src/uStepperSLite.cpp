@@ -81,7 +81,7 @@ extern "C" {
 
 	void interrupt1(void)
 	{
-		Serial.println("1");
+		//Serial.println("1");
 		if(PIND & 0x08)
 		{
 			PORTD |= (1 << 4);
@@ -94,7 +94,7 @@ extern "C" {
 
 	void interrupt0(void)
 	{
-		Serial.println("0");
+		//Serial.println("0");
 		pointer->speedValue[1] = pointer->speedValue[0];
 		pointer->speedValue[0] = micros();
 
@@ -1105,6 +1105,13 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 
 void uStepperSLite::hardStop(bool holdMode)
 {
+	#warning "Function only here for compatibility with old code. this function is replaced by "stop(bool brake)"
+
+	this->stop(holdMode);
+}
+
+void stop(bool brake)
+{
 	if(this->mode == DROPIN)
 	{
 		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
@@ -1140,7 +1147,7 @@ void uStepperSLite::hardStop(bool holdMode)
 
 void uStepperSLite::softStop(bool holdMode)
 {
-	float curVel;
+	/*float curVel;
 
 	if(this->mode == DROPIN)
 	{
@@ -1188,7 +1195,11 @@ void uStepperSLite::softStop(bool holdMode)
 		{
 			this->enableMotor();
 		}
-	}
+	}*/
+
+	#warning "Function only here for compatibility with old code. this function is replaced by "stop(bool brake)"
+
+	this->stop(holdMode);
 }
 
 void uStepperSLite::setup(	uint8_t mode, 
@@ -1335,70 +1346,6 @@ int32_t uStepperSLite::getStepsSinceReset(void)
 void uStepperSLite::setCurrent(float current)
 {
 	this->driver.setCurrent(current);
-}
-
-void uStepperSLite::pwmD2(double duty, bool mode)
-{
-	if(mode == PWM)
-	{
-		if(!(TCCR2A & (1 << COM2B1)))
-		{
-			pinMode(2,OUTPUT);
-			TCCR2B |= (1 << COM2B1);
-		}
-	}
-	else
-	{
-		pinMode(2,INPUT);
-		TCCR2A &= ~(1 << COM2B1);
-		return;
-	}
-	
-
-	if(duty > 100.0)
-	{
-		duty = 100.0;
-	}
-	else if(duty < 0.0)
-	{
-		duty = 0.0;
-	}
-
-	duty *= 7.0;
-
-	OCR2B = (uint16_t)(duty + 0.5);
-}
-
-void uStepperSLite::pwmD3(double duty, bool mode)
-{
-	if(mode == PWM)
-	{
-		if(!(TCCR3A & (1 << COM3B1)))
-		{
-			pinMode(3,OUTPUT);
-			TCCR3B |= (1 << COM3B1);
-		}
-	}
-	else
-	{
-		pinMode(3,INPUT);
-		TCCR3A &= ~(1 << COM3B1);
-		return;
-	}
-	
-
-	if(duty > 100.0)
-	{
-		duty = 100.0;
-	}
-	else if(duty < 0.0)
-	{
-		duty = 0.0;
-	}
-
-	duty *= 7.0;
-
-	OCR3B = (uint16_t)(duty + 0.5);
 }
 
 void uStepperSLite::updateSetPoint(float setPoint)
@@ -1878,8 +1825,8 @@ bool uStepperSLite::detectStall(float diff, bool running)
 
 			if(temp < 0.3 && temp > -0.3)
 			{
-				Serial.println(temp);
-				Serial.println(treshold);
+				//Serial.println(temp);
+				//Serial.println(treshold);
 				this->stall = 1;
 			}
 			else

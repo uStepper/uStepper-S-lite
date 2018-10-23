@@ -255,6 +255,9 @@
 /** Value to put in hold variable in order for the motor to \b not block when it is not running */
 #define SOFT 0							
 
+#define BRAKEON 1
+#define BRAKEOFF 0
+
 /** Frequency at which the encoder is sampled, for keeping track of angle moved and current speed */
 #define ENCODERINTFREQ 1000.0			
 /** Constant to convert angle difference between two interrupts to speed in revolutions per second */
@@ -838,7 +841,7 @@ public:
 	
 
 	/**
-	 * @brief      Stop the motor without deceleration
+	 * @brief      Stop the motor without deceleration !!! DEPRECATED !!!
 	 *
 	 *             This function will stop any ongoing motor movement, without
 	 *             any deceleration phase. If the motor is rotation at a
@@ -851,6 +854,23 @@ public:
 	 *                       freewheel mode (without the quotes).
 	 */
 	void hardStop(bool holdMode);
+	
+
+	/**
+	 * @brief      Stop the motor with deceleration !!! DEPRECATED !!!
+	 *
+	 *             This function stops any ongoing motor movement, with a
+	 *             deceleration phase. This will take longer for the motor to
+	 *             stop, however the mechanical vibrations related to the
+	 *             stopping of the motor can be significantly reduced compared
+	 *             to the hardStop() function. The argument "holdMode" can be
+	 *             used to define whether the motor should brake or freewheel
+	 *             after the function has been called.
+	 *
+	 * @param      holdMode  -	can be set to "HARD" for brake mode or "SOFT" for
+	 *                       freewheel mode (without the quotes).
+	 */
+	void softStop(bool holdMode);
 	
 
 	/**
@@ -867,8 +887,7 @@ public:
 	 * @param      holdMode  -	can be set to "HARD" for brake mode or "SOFT" for
 	 *                       freewheel mode (without the quotes).
 	 */
-	void softStop(bool holdMode);
-	
+	void stop(bool brake = BRAKEON);
 
 	/**
 	 * @brief      Initializes the different parts of the uStepper object
@@ -962,29 +981,6 @@ public:
 	 *             the clockwise direction, with respect to the initial position.
 	 */
 	int32_t getStepsSinceReset(void);
-
-	/**
-	 * @brief      Generate PWM signal on digital output 8
-	 *
-	 *             This function allows the user to generate PWM signal on
-	 *             digital output 8. The PWM signal has a fixed frequency of
-	 *             1kHz, from 0% - 100% duty cycle, in steps of 0.00625%
-	 *             (resolution of 13.97 bits).
-	 *
-	 * @param      duty  - Desired duty cycle of PWM signal. range: 0.0 to
-	 *                   100.0.
-	 */
-	void pwmD2(double duty = 0.0, bool mode = PWM);
-
-	/**
-	 * @brief      Sets the mode of digital pin D8
-	 * 
-	 * 			   This function changes digital pin D8 between PWM mode and normal I/O mode. 
-	 *
-	 * @param[in]  mode  By supplying 'PWM' as argument, the digital pin acts as a PWM pin.
-	 * 				     By supplying 'NORMAL' as argument, the digital pin acts as a normal I/O pin.
-	 */
-	void pwmD3(double duty = 0.0, bool mode = PWM);
 
 	/**
 	 * @brief      Set motor output current

@@ -80,14 +80,14 @@ void Tmc2208::setup(void)
 	DDRD |= (1 << 4);			//Set Enable as output
 	DDRD |= (1 << 7);			//Set Step pin as output
 	DDRB |= (1 << 2);			//Set Dir pin as Output
-
+	this->disableDriver();
 	this->uartInit();
 	registerSetting = R00;
 	registerSetting |= TMC2208_PDN_DISABLE_MASK;
 	this->writeRegister(TMC2208_GCONF, registerSetting);
 	registerSetting = 5000;
 	this->writeRegister(TMC2208_TPWMTHRS, registerSetting);
-	this->setCurrent(75);
+	this->setCurrent(25);
 	this->setVelocity(0);	
 }
 
