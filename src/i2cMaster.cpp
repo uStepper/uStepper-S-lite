@@ -24,7 +24,7 @@ bool i2cMaster::cmd(uint8_t cmd)
 
 bool i2cMaster::read(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uint8_t *data)
 {
-	uint8_t i, buff[numOfBytes];
+	uint8_t i;
 
 	if(this->start(slaveAddr, WRITE) == false)
 	{

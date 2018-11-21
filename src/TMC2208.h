@@ -246,10 +246,6 @@
 	#define  BIT30  0x40000000
 	#define  BIT31  0x80000000
 
-	// parameter access
-	#define READ   0
-	#define WRITE  1
-
 	// Static Array length
 	#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
@@ -267,10 +263,11 @@
 	#define UARTRXDDR DDRC
 	#define UARTRXPIN 2
 
+	#define NORMALDIRECTION 0
+	#define INVERSEDIRECTION 1
+
 	// 2us delay (30 nops @ 62.5ns = 1.875us + C overhead ~ 2us) 500k baud
-	#define UARTCLKDELAY() 	__asm__ volatile ( 	"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" \
-												"nop \n\t" "nop \n\t" \																													
-							)
+	#define UARTCLKDELAY() 	__asm__ volatile ( 	"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" )
 
 class Tmc2208
 {
@@ -279,8 +276,11 @@ class Tmc2208
 		void setup(void);
 		void disableDriver(void);
 		void enableDriver(void);
-		void setCurrent(uint8_t percent);
+		void setCurrent(uint8_t runPercent, uint8_t holdPercent);
+		void setHoldCurrent(uint8_t holdPercent);
+		void setRunCurrent(uint8_t runPercent);
 		void setVelocity(float RPM);
+		void invertDirection(bool normal = INVERSEDIRECTION);
 
 	private:
 		void writeRegister(uint8_t address, int32_t value);
@@ -288,7 +288,10 @@ class Tmc2208
 		uint8_t calcCRC(uint8_t datagram[], uint8_t len);
 		void uartInit(void);
 		void uartSendByte(uint8_t value);
-		bool uartReceivePacket(uint8_t *packet, uint8_t size);
+		bool uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)));
+
+		uint8_t runCurrent;
+		uint8_t holdCurrent;
 };
 
 #endif

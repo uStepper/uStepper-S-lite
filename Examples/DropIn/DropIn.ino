@@ -22,7 +22,7 @@ uStepperSLite stepper;
 
 void setup(void)
 {
-	stepper.setup(DROPIN,SIXTEEN,10,5,100.0,2.0,0.6);
+	stepper.setup(DROPIN,SIXTEEN,10,5,20.0,30.0,10.0);
 }
 
 void loop(void)

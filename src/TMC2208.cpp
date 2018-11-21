@@ -64,7 +64,7 @@ cli();
 	if(readData[7] != calcCRC(readData, 7) || readData[0] != 0x05 || readData[1] != 0xFF || readData[2] != address)
 		return;
 
-	*value = readData[3] << 24 | readData[4] << 16 | readData[5] << 8 | readData[6];
+	*value = (uint32_t)readData[3] << 24 | (uint32_t)readData[4] << 16 | (uint32_t)readData[5] << 8 | (uint32_t)readData[6];
 	return;
 }
 
@@ -83,12 +83,27 @@ void Tmc2208::setup(void)
 	this->disableDriver();
 	this->uartInit();
 	registerSetting = R00;
-	registerSetting |= TMC2208_PDN_DISABLE_MASK;
+	registerSetting |= TMC2208_PDN_DISABLE_MASK | TMC2208_INDEX_STEP_MASK ;
 	this->writeRegister(TMC2208_GCONF, registerSetting);
 	registerSetting = 5000;
 	this->writeRegister(TMC2208_TPWMTHRS, registerSetting);
-	this->setCurrent(25);
+	this->setCurrent(75,75);
 	this->setVelocity(0);	
+}
+
+void Tmc2208::invertDirection(bool normal)
+{
+	int32_t registerSetting;
+	registerSetting = R00;
+	if(normal == NORMALDIRECTION)
+	{
+		registerSetting |= TMC2208_PDN_DISABLE_MASK | TMC2208_INDEX_STEP_MASK;
+	}
+	else
+	{
+		registerSetting |= TMC2208_PDN_DISABLE_MASK | TMC2208_INDEX_STEP_MASK | TMC2208_SHAFT_MASK;
+	}
+	this->writeRegister(TMC2208_GCONF, registerSetting);
 }
 
 void Tmc2208::enableDriver(void)
@@ -132,42 +147,51 @@ void Tmc2208::uartSendByte(uint8_t value)
 	
 }
 
-bool Tmc2208::uartReceivePacket(uint8_t *packet, uint8_t size)
+bool Tmc2208::uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)))
 {
-	uint32_t timeout = millis();
-
-	while(size--)
-	{
-		while ( !(UCSR0A & (1<<RXC0)) )
-		{
-			if((millis() - timeout) > TIMEOUT_VALUE) // Timeout
-			{
-				return;
-			}
-		}
-		*packet++ = UDR0;
-	}
+	return 0;
 }
 
-void Tmc2208::setCurrent(uint8_t percent)
+void Tmc2208::setCurrent(uint8_t runPercent, uint8_t holdPercent)
+{
+	this->setRunCurrent(runPercent);
+	this->setHoldCurrent(holdPercent);
+}
+
+void Tmc2208::setRunCurrent(uint8_t runPercent)
 {
 	int32_t registerSetting = 0;
 
-	if(percent >= 100)
+	if(runPercent >= 100)
 	{
-		percent = 31;
-	}
-	else if(percent == 0)
-	{
-		//Do nothing
+		this->runCurrent = 31;
 	}
 	else
 	{
-		percent = ((uint8_t)(float)percent * 0.32) - 1; 
+		this->runCurrent = ((uint8_t)(float)runPercent * 0.32) - 1; 
 	}
 
-	registerSetting |= ((int32_t)(percent & 0x1F));
-	registerSetting |= (((int32_t)(percent & 0x1F)) << 8);
+	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
+	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
+
+	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
+}
+
+void Tmc2208::setHoldCurrent(uint8_t holdPercent)
+{
+	int32_t registerSetting = 0;
+
+	if(holdPercent >= 100)
+	{
+		this->holdCurrent = 31;
+	}
+	else
+	{
+		this->holdCurrent = ((uint8_t)(float)holdPercent * 0.32) - 1; 
+	}
+
+	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
+	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
 
 	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
 }
@@ -177,11 +201,7 @@ void Tmc2208::setVelocity(float RPM)
 	float dummy;
 
 	dummy = (float)RPM;
-	dummy *= 0.01666667;
-
-	dummy *= 3200;
-
-	dummy *= 1.0486;
+	dummy *= 55.925333333;		//0.016666666666*3200*1.0486 = 55.925333333
 
 	RPM = (int32_t)(dummy + 0.5);
 

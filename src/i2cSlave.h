@@ -8,6 +8,14 @@
 #include <avr/io.h>
 #include <inttypes.h>
 
+#ifdef TW_STATUS
+	#undef TW_STATUS
+#endif
+
+#ifdef TW_STATUS_MASK
+	#undef TW_STATUS_MASK
+#endif
+
 #define TW_STATUS_MASK (_BV(TWS07)|_BV(TWS06)|_BV(TWS05)|_BV(TWS04)|_BV(TWS03))
 #define TW_STATUS (TWSR0 & TW_STATUS_MASK) 
 
@@ -43,7 +51,7 @@ public:
 	void* operator new(size_t size);
 	
 	I2CSlave(void (*recv)(uint8_t), void (*req)(uint8_t), void (*finished)(uint8_t));
-	void setup(uint8_t channel, uint8_t address);
+	void setup(uint8_t channel __attribute__((unused)), uint8_t address);
 	inline void __attribute__((always_inline)) I2CTransmitByte(uint8_t data)
 	{
   		TWDR0 = data;

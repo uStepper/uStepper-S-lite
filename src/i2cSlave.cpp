@@ -61,7 +61,7 @@ I2CSlave::I2CSlave(void (*recv)(uint8_t), void (*req)(uint8_t), void (*finished)
 	I2CSetCallbacks(recv, req, finished);
 }
 
-void I2CSlave::setup(uint8_t channel, uint8_t address)
+void I2CSlave::setup(uint8_t channel __attribute__((unused)), uint8_t address)
 {
 	cli();
 	// load address into TWI address register

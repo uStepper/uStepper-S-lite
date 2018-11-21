@@ -205,7 +205,7 @@
 
 #include <inttypes.h>
 #include <avr/io.h>
-#include <avr/delay.h>
+#include <util/delay.h>
 #include <Arduino.h>
 #include <uStepperServo.h>
 #include "TMC2208.h"
@@ -259,7 +259,8 @@
 #define BRAKEOFF 0
 
 /** Frequency at which the encoder is sampled, for keeping track of angle moved and current speed */
-#define ENCODERINTFREQ 1000.0			
+#define ENCODERINTFREQ 1000.0		
+#define ENCODERINTSAMPLETIME 1.0/1000.0		
 /** Constant to convert angle difference between two interrupts to speed in revolutions per second */
 #define ENCODERSPEEDCONSTANT ENCODERINTFREQ/10.0/4096.0	
 /** I2C address of the encoder chip */
@@ -272,7 +273,7 @@
 #define AGC 0x1A						
 /** Address of the register, in the encoder chip, containing the 8 least significant bits of magnetic field strength measured by the encoder chip */
 #define MAGNITUDE 0x1B					
- 
+#define PIDACCELRATE 2.0
 /**
  * @brief      Used by dropin feature to take in step pulses
  *
@@ -311,6 +312,8 @@ extern "C" void TIMER2_COMPA_vect(void) __attribute__ ((signal,naked,used));
  */
 extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 
+extern "C" void PCINT2_vect(void) __attribute__ ((signal,used,naked));
+
 class float2
 {
 	public:
@@ -329,7 +332,6 @@ class float2
 		float2 & operator*=(const float2 &value);
 		float2 & operator-=(const float2 &value);
 		float2 & operator+=(const float2 &value);
-		float2 & operator+=(const float &value);
 		float2 & operator/=(const float2 &value);
 		const float2 operator+(const float2 &value);
 		const float2 operator-(const float2 &value);
@@ -356,7 +358,9 @@ class uStepperEncoder
 public:
 	/** Variable used to store that measured angle moved from the
 	* reference position */
-	volatile int32_t angleMoved;		
+	volatile int32_t angleMoved;	
+
+	volatile int32_t angleMovedRaw;	
 	
 	/** Angle of the shaft at the reference position. */
 	uint16_t encoderOffset;				
@@ -460,16 +464,15 @@ public:
 	 * @return     The angle moved.
 	 */
 	float getAngleMoved(void);
+
+	float getAngleMovedRaw(void);
 	
 	/**
 	 * @brief      Setup the encoder
 	 *
 	 *             This function initializes all the encoder features.
-	 *
-	 * @param[in]  mode  Variable to indicate if the uStepper is in normal or
-	 *                   drop-in mode
 	 */
-	void setup(uint8_t mode);
+	void setup(void);
 	
 	/**
 	 * @brief      Define new reference(home) position
@@ -567,10 +570,10 @@ private:
 	 * direction. */
 	volatile int32_t stepsSinceReset;
 
-	/** Dummy variable, to make variable addresses fit with algorithm
-	 *	After the stepsSinceReset has been changed to int32_t */
-	int32_t dummy;		
-	
+		/** This variable contains the number of steps commanded by
+	* external controller, in case of dropin feature */
+	volatile int32_t stepCnt;
+
 	//Address offset: 46
 	/** This variable contains the exact delay (in number of
 	 * interrupts) before the next step is applied. This variable is
@@ -588,8 +591,9 @@ private:
 	uint16_t delay;				
 
 	//Address offset: 56
-	/** Not used anymore ! */
-	bool dropIn;				
+	/** This variable is used to indicate which mode the uStepper is
+	* running in (Normal, dropin or pid)*/
+	uint8_t mode;			
 
 	//Address offset: 57
 	/** This variable contains the maximum velocity, the motor is
@@ -628,11 +632,6 @@ private:
 	volatile uint16_t counter;		
 	
 	//address offset: 79
-	/** This variable contains the number of steps commanded by
-	* external controller, in case of dropin feature */
-	volatile int32_t stepCnt;		
-	
-	//address offset: 83
 	/** This variable contains the number of steps we are off the
 	* setpoint, and is updated once every PID sample. */
 	volatile int32_t control;		
@@ -656,24 +655,28 @@ private:
 	* PID */
 	float dTerm;					
 	
-	//address offset: 107
-	/** This variable is used to indicate which mode the uStepper is
-	* running in (Normal, dropin or pid)*/
-	uint8_t mode;					
+	//address offset: 107				
 
+	//address offset: 108
 	/** This variable converts an angle in degrees into a corresponding
 	 * number of steps*/
 	float angleToStep;		
 
+	//address offset: 112
 	/** This variable holds information on wether the motor is stalled or not.
 	0 = OK, 1 = stalled */
 	volatile bool stall;
 
+	//address offset: 113
 	volatile bool invertDir;
+
+	volatile float dropinStepSpeed;
+	
 
 	friend void TIMER2_COMPA_vect(void) __attribute__ ((signal,naked,used));
 	friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 	friend void interrupt0(void);
+	friend void PCINT2_vect(void) __attribute__ ((signal,used,naked));
 	friend void uStepperEncoder::setHome(void);
 
 	/**
@@ -720,16 +723,10 @@ private:
 	void disableMotor(void);
 
 	/**
-	 * @brief      This method handles the actual PID controller calculations
-	 *             for drop-in feature, if enabled.
-	 */
-	void pidDropIn(void);
-
-	/**
 	 * @brief      This method handles the actual PID controller calculations,
 	 *             if enabled.
 	 */
-	void pid(void);
+	void pid(int16_t deltaAngle);
 
 public:			
 	/** Instantiate object for the encoder */
@@ -931,7 +928,7 @@ public:
 				float faultHysteresis = 5.0, 
 				float pTerm = 1.0, 
 				float iTerm = 0.02, 
-				float dterm = 0.006,
+				float dTerm = 0.006,
 				bool setHome = true);	
 
 	/**
@@ -991,18 +988,29 @@ public:
 	 *
 	 * @param[in]  current Desired current setting in percent (0% - 100%)
 	 */
-	void setCurrent(float current);
+	void setCurrent(uint8_t runCurrent, uint8_t holdCurrent = 25);
 
-	/**
-	 * @brief      Updates setpoint for the motor
+		/**
+	 * @brief      Set motor output current
 	 *
-	 *             This method updates the setpoint for the motor. This function
-	 *             is used when it is desired to provide an absolute position
-	 *             for the motor, and should be used in the DROPIN mode
+	 *             This function allows the user to change the current setting of the motor
+	 *             driver. In order to utilize this feature, the current jumper should be 
+	 *             placed in the "I-PWM" position on the uStepper board.
 	 *
-	 * @param[in]  setPoint  The setpoint in degrees
+	 * @param[in]  current Desired current setting in percent (0% - 100%)
 	 */
-	void updateSetPoint(float setPoint);
+	void setHoldCurrent(uint8_t holdCurrent);
+
+		/**
+	 * @brief      Set motor output current
+	 *
+	 *             This function allows the user to change the current setting of the motor
+	 *             driver. In order to utilize this feature, the current jumper should be 
+	 *             placed in the "I-PWM" position on the uStepper board.
+	 *
+	 * @param[in]  current Desired current setting in percent (0% - 100%)
+	 */
+	void setRunCurrent(uint8_t runCurrent);
 	
 	/**
 	 * @brief      	Moves the motor to its physical limit, without limit switch

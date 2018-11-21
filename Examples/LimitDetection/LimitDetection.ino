@@ -10,8 +10,7 @@ uStepperSLite stepper;
 
 void setup() {
   // put your setup code here, to run once:
- //stepper.setup();
-  stepper.setup(PID,SIXTEEN,10,5,2.0,2.0,0.6);//enable PID
+  stepper.setup();
   stepper.setCurrent(50.0);//use software current setting
   stepper.setMaxAcceleration(20000);
   stepper.setMaxVelocity(4000);
