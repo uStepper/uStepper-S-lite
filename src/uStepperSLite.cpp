@@ -69,7 +69,7 @@
  * @author     Thomas Hørring Olsen (thomas@ustepper.com)
  */
 #include <uStepperSLite.h>
-
+#include <math.h>
 uStepperSLite *pointer;
 i2cMaster I2C(1);
 
@@ -112,8 +112,10 @@ extern "C" {
 		uint8_t data[2];
 		uint16_t curAngle;
 		int16_t deltaAngle;
-
+		static uint16_t lastTcnt1;
+		int16_t tcnt1Diff;
 		float posError = 0.0;
+		float sampleTime;
 		static float posEst = 0.0;
 		static float velIntegrator = 0.0;
 		static float velEst = 0.0;
@@ -122,6 +124,11 @@ extern "C" {
 		{
 			sei();
 		}
+
+		tcnt1Diff = ((int16_t)TCNT1) - lastTcnt1;
+		lastTcnt1 = (int16_t)TCNT1;
+		sampleTime = ((float)(16000 + tcnt1Diff)) * 0.000625;
+		sampleTime *= 0.0001;
 
 		if(I2C.getStatus() != I2CFREE)
 		{
@@ -153,14 +160,14 @@ extern "C" {
 
 		pointer->encoder.angleMoved += deltaAngle;		
 
-		pointer->encoder.curSpeed *= 0.999;
-		pointer->encoder.curSpeed += 0.001 * (ENCODERINTFREQ * (float)deltaAngle) * ENCODERRAWTOANGLE;
+		pointer->encoder.curSpeed *= 0.9;
+		pointer->encoder.curSpeed += 0.1 * (ENCODERINTFREQ * (float)deltaAngle) * ENCODERRAWTOANGLE;
 
 		pointer->encoder.oldAngle = curAngle;
 
 		if(pointer->mode == DROPIN)
 		{
-			posEst += velEst * ENCODERINTSAMPLETIME;
+			posEst += velEst * sampleTime;
 			cli();
 			posError = (float)pointer->stepCnt - posEst;
 			sei();
@@ -175,9 +182,11 @@ extern "C" {
 
 			pointer->detectStall((float)deltaAngle, pointer->getMotorState());
 		}
-		else if(pointer->mode == PID)
+		else
 		{
-			pointer->currentPidSpeed += pointer->currentPidAcceleration * ENCODERINTSAMPLETIME;
+			
+			
+			pointer->currentPidSpeed += pointer->currentPidAcceleration * sampleTime;
 			if(pointer->direction == CW)
 			{
 				if(pointer->currentPidSpeed >= pointer->velocity * pointer->stepsPerSecondToRPM)
@@ -193,7 +202,7 @@ extern "C" {
 				}
 			}
 			
-			pointer->pidStepsSinceReset += (pointer->currentPidSpeed * pointer->RPMToStepsPerSecond) * ENCODERINTSAMPLETIME;
+			pointer->pidStepsSinceReset += (pointer->currentPidSpeed * pointer->RPMToStepsPerSecond) * sampleTime;
 			pointer->stepsSinceReset = (int32_t)(pointer->pidStepsSinceReset + 0.5);
 			if(pointer->state == INITDECEL)
 			{
@@ -281,7 +290,7 @@ extern "C" {
 				pointer->currentPidSpeed = 0.0;
 			}
 			
-			if(!pointer->pidDisabled)
+			if(!pointer->pidDisabled && pointer->mode == PID)
 			{
 				pointer->pid(deltaAngle);
 			}
@@ -289,10 +298,6 @@ extern "C" {
 			{
 				pointer->driver.setVelocity(pointer->currentPidSpeed);
 			}
-			pointer->detectStall((float)deltaAngle, pointer->getMotorState());
-		}
-		else
-		{
 			pointer->detectStall((float)deltaAngle, pointer->getMotorState());
 		}
 	}
@@ -536,6 +541,7 @@ void uStepperSLite::runContinous(bool dir)
 		this->currentPidSpeed = startVelocity * this->stepsPerSecondToRPM;
 		this->state = state;
 		this->continous = 1;			//Set continous variable to 1, in order to let the interrupt routine now, that the motor should run continously
+		PORTD &= ~(1 << 4);
 	sei();
 }
 
@@ -687,6 +693,7 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 		}
 		this->currentPidSpeed = startVelocity * this->stepsPerSecondToRPM;
 		this->state = state;
+		PORTD &= ~(1 << 4);
 	sei();
 }
 
@@ -804,18 +811,6 @@ void uStepperSLite::checkConnectorOrientation(void)
 }
 
 void uStepperSLite::setup(	uint8_t mode, 
-							uint8_t stepsPerRevolution, 
-							uint32_t faultTolerance __attribute__((unused)) ,
-							uint32_t faultHysteresis __attribute__((unused)) , 
-							float pTerm, 
-							float iTerm, 
-							float dTerm,
-							bool setHome)
-{
-	this->setup(mode, 200.0*((float)stepsPerRevolution), pTerm, iTerm, dTerm ,setHome);
-}
-
-void uStepperSLite::setup(	uint8_t mode, 
 							float stepsPerRevolution,
 							float pTerm, 
 							float iTerm,
@@ -833,6 +828,7 @@ void uStepperSLite::setup(	uint8_t mode,
 		
 	this->stepConversion = (float)(stepsPerRevolution)/4096.0;	//Calculate conversion coefficient from raw encoder data, to actual moved steps
 	this->angleToStep = ((float)(stepsPerRevolution))/360.0;	//Calculate conversion coefficient from angle to corresponding number of steps
+	this->stepToAngle = 360.0/((float)(stepsPerRevolution));	//Calculate conversion coefficient from steps to corresponding angle
 	this->stepsPerSecondToRPM = 60.0/stepsPerRevolution;
 	this->RPMToStepsPerSecond = stepsPerRevolution/60.0;
 	this->encoder.setHome();
@@ -942,17 +938,22 @@ float uStepperSLite::moveToEnd(bool dir)
   	}
   	else
   	{
-		while(checks < 5)//allows for 2 checks on movement error
+  		delay(100);
+		while(checks < 20)//allows for 2 checks on movement error
 		{
-			pos = abs(this->encoder.getAngleMoved() - (this->getStepsSinceReset()*0.1125));//see current position error
-			if(pos < 5.0)//if position error is less than 5 steps it is okay...
+			pos = abs(this->encoder.getAngleMoved() - (this->getStepsSinceReset()*this->stepToAngle));//see current position error
+			Serial.print(this->encoder.curSpeed);
+			Serial.print("   ");
+			Serial.println((((float)this->velocity * this->stepsPerSecondToRPM)/2.0));
+			if(abs(this->encoder.curSpeed) < (((float)this->velocity * this->stepsPerSecondToRPM)/2.0))//if position error is less than 5 steps it is okay...
 			{
-				checks = 0;
+				checks++;
 			}
 			else //if position error is 5 steps or more, count up checks
 			{
-		  		checks++;
+		  		checks = 0;
 			}
+			delay(1);
 		}
 
 	  	this->stop(SOFT);//stop motor without brake
@@ -984,7 +985,7 @@ void uStepperSLite::moveToAngle(float angle, bool holdMode)
 
 	if(this->encoder.detectMagnet())
 	{
-		return;		//Magnet Not Detected. Abort
+		//return;		//Magnet Not Detected. Abort
 	}
 
 	diff = angle - this->encoder.getAngleMoved();

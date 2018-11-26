@@ -530,7 +530,7 @@ private:
 	/** This variable converts an angle in degrees into a corresponding
 	 * number of steps*/
 	float angleToStep;	
-
+	float stepToAngle;
 	//address offset: 112
 	/** This variable holds information on wether the motor is stalled or not.
 	0 = OK, 1 = stalled */
@@ -714,15 +714,6 @@ public:
 	 *                       freewheel mode (without the quotes).
 	 */
 	void stop(bool brake = BRAKEON);
-
-	void setup(	uint8_t mode = NORMAL, 
-				uint8_t stepsPerRevolution = SIXTEEN, 
-				uint32_t faultTolerance __attribute__((unused)) = 10,
-				uint32_t faultHysteresis __attribute__((unused)) = 5, 
-				float pTerm = 1.0, 
-				float iTerm = 1.0, 
-				float dTerm = 0.0,
-				bool setHome = true) __attribute__ ((deprecated("Function only here for compatibility with old code. Use the new format for new code")));
 
 	/**
 	 * @brief      Initializes the different parts of the uStepper object
