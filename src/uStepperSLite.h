@@ -196,8 +196,8 @@
  * @author     Thomas Hørring Olsen (thomas@ustepper.com)
  */
 
-#ifndef _USTEPPER_S_LIGHT_H_
-#define _USTEPPER_S_LIGHT_H_
+#ifndef _USTEPPER_S_LITE_H_
+#define _USTEPPER_S_LITE_H_
 
 #ifndef __AVR_ATmega328PB__
 #error !!This library only supports the ATmega328pb MCU!!
@@ -255,6 +255,8 @@
 /** Value to put in hold variable in order for the motor to \b not block when it is not running */
 #define SOFT 0							
 
+#define ENCODERRAWTOANGLE 0.014648438
+
 #define BRAKEON 1
 #define BRAKEOFF 0
 
@@ -272,8 +274,11 @@
 /** Address of the register, in the encoder chip, containing information about the current gain value used in the encoder chip. This value should preferably be around 127 (Ideal case!) */
 #define AGC 0x1A						
 /** Address of the register, in the encoder chip, containing the 8 least significant bits of magnetic field strength measured by the encoder chip */
-#define MAGNITUDE 0x1B					
-#define PIDACCELRATE 2.0
+#define MAGNITUDE 0x1B	
+
+#define PULSEFILTERKP 60.0
+#define PULSEFILTERKI 1500.0*ENCODERINTSAMPLETIME
+
 /**
  * @brief      Used by dropin feature to take in step pulses
  *
@@ -291,18 +296,6 @@ extern "C" void interrupt0(void);
 extern "C" void interrupt1(void);
 
 /**
- * @brief      Used to apply step pulses to the motor
- *
- *
- *             This interrupt routine is in charge of applying step pulses to
- *             the motor. The routine runs at a frequency of 28.2kHz, and
- *             handles acceleration algorithm calculations, as well as applying
- *             step pulses during compensation for missed steps, while either
- *             dropin or PID feature are enabled.
- */
-extern "C" void TIMER2_COMPA_vect(void) __attribute__ ((signal,naked,used));
-
-/**
  * @brief      Measures angle and speed of motor.
  *
  *             This interrupt routine is in charge of sampling the encoder and
@@ -311,38 +304,6 @@ extern "C" void TIMER2_COMPA_vect(void) __attribute__ ((signal,naked,used));
  *             normal operation it runs at a frequency of 1kHz.
  */
 extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
-
-extern "C" void PCINT2_vect(void) __attribute__ ((signal,used,naked));
-
-class float2
-{
-	public:
-		float2(void);
-		float getFloatValue(void);
-		uint64_t getRawValue(void);
-		void setValue(float val);
-		float2 & operator=(const float &value);
-		bool operator==(const float2 &value);
-		bool operator!=(const float2 &value);
-		bool operator>=(const float2 &value);
-		bool operator<=(const float2 &value);
-		bool operator<=(const float &value);
-		bool operator<(const float2 &value);
-		bool operator>(const float2 &value);
-		float2 & operator*=(const float2 &value);
-		float2 & operator-=(const float2 &value);
-		float2 & operator+=(const float2 &value);
-		float2 & operator/=(const float2 &value);
-		const float2 operator+(const float2 &value);
-		const float2 operator-(const float2 &value);
-		const float2 operator*(const float2 &value);
-		const float2 operator/(const float2 &value);
-		uint64_t value;
-
-	private:
-		friend void TIMER2_COMPA_vect(void) __attribute__ ((signal,used));
-		
-};
 
 /**
  * @brief      Prototype of class for the AS5600 encoder
@@ -498,64 +459,17 @@ private:
 class uStepperSLite
 {
 private:
-	//Address offset: 0	
-	/** This variable is used by the stepper acceleration algorithm to set the delay between step pulses when running at the set cruise speed */
-	uint16_t cruiseDelay;
-
-	//Address offset: 2
-	/** This is the constant multiplier used by the stepper algorithm.
-	 * See description of timer2 overflow interrupt routine for more
-	 * details. */		
-	float2 multiplier;					
-	
 	//Address offset: 10
 	/** This variable is used by the stepper algorithm to keep track of
 	 * which part of the acceleration profile the motor is currently
 	 * operating at. */
 	uint8_t state;		
 
-	//Address offset: 11
-	/** This variable keeps track of how many steps to perform in the
-	 * acceleration phase of the profile. */
-	uint32_t accelSteps;						
-	
-	//Address offset: 15
-	/** This variable keeps track of how many steps to perform in the
-	 * deceleration phase of the profile. */
-	uint32_t decelSteps;				
-	
-	//Address offset: 19
-	/** This variable keeps track of how many steps to perform in the
-	* initial deceleration phase of the profile. */
-	uint32_t initialDecelSteps;				
-	
-	//Address offset: 23
-	/** This variable keeps track of how many steps to perform in the
-	* cruise phase of the profile. */
-	uint32_t cruiseSteps;				
-	
-	//Address offset: 27
-	/** This variable keeps track of the current step number in the
-	* current move of a predefined number of steps. */
-	uint32_t currentStep;			 
-	
-	//Address offset: 31
-	/** This variable keeps track of the total number of steps to be
-	* performed in the current move of a predefined number of steps. */
-	uint32_t totalSteps;			
-	
 	//Address offset: 35
 	/** This variable tells the algorithm whether the motor should
 	 * rotated continuous or only a limited number of steps. If set to
 	 * 1, the motor will rotate continous. */
 	bool continous;					
-
-	//Address offset: 36
-	/** This variable tells the algorithm if it should block the motor
-	 * by keeping the motor coils excited after the commanded number of
-	 * steps have been carried out, or if it should release the motor
-	 * coil, allowing the shaft to be rotated freely. */
-	bool hold;						
 
 	//Address offset: 37
 	/** This variable tells the algorithm the direction of rotation for
@@ -572,23 +486,7 @@ private:
 
 		/** This variable contains the number of steps commanded by
 	* external controller, in case of dropin feature */
-	volatile int32_t stepCnt;
-
-	//Address offset: 46
-	/** This variable contains the exact delay (in number of
-	 * interrupts) before the next step is applied. This variable is
-	 * used in the calculations of the next step delay. */
-	float2 exactDelay;								
-	
-	//Address offset: 54	
-	/** This variable is used by the stepper algorithm to keep track of
-	 * when to apply the next step pulse. When the algorithm have
-	 * applied a step pulse, it will calculate the next delay (in number
-	 * of interrupts) needed before the next pulse should be applied. A
-	 * truncated version of this delay will be put in this variable and
-	 * is decremented by one for each interrupt untill it reaches zero
-	 * and a step is applied. */
-	uint16_t delay;				
+	volatile int32_t stepCnt;						
 
 	//Address offset: 56
 	/** This variable is used to indicate which mode the uStepper is
@@ -610,96 +508,50 @@ private:
 	 * curve, the acceleration applied will always be either +/- this
 	 * value (acceleration/deceleration)or zero (cruise). */
 	float acceleration;				
-
-	//address offset: 65
-	/** This variable contains the number of missed steps allowed
- 	* before the PID controller kicks in, if activated */	
-	volatile float tolerance;		
-	
-	//address offset: 69
-	/** This variable contains the error which the PID controller
-	 * should have obtained in order to switch off */
-	volatile float hysteresis;		
 	
 	//address offset: 73
 	/** This variable contains the conversion coefficient from raw
 	* encoder data to number of steps */					
 	volatile float stepConversion;	
-
-	//address offset: 77
-	/** This variable is used by Timer2 to check wether it is time to
-	* generate steps or not. only used if PID is activated */	
-	volatile uint16_t counter;		
-	
-	//address offset: 79
-	/** This variable contains the number of steps we are off the
-	* setpoint, and is updated once every PID sample. */
-	volatile int32_t control;		
-	
-	//address offset: 87
-	/** This variable contains the number of microseconds between last
-	* step pulse from external controller */
-	volatile uint32_t speedValue[2];
 	
 	//address offset: 95
 	/** This variable contains the proportional coefficient used by the
 	* PID */
 	float pTerm;					
-	
+	float stepsPerSecondToRPM;
+	float RPMToStepsPerSecond;
 	//address offset: 99
 	/** This variable contains the integral coefficient used by the PID */
-	float iTerm;					
+	float iTerm;		
 
-	//address offset: 103
-	/** This variable contains the differential coefficient used by the
-	* PID */
-	float dTerm;					
-	
-	//address offset: 107				
+	float dTerm;								
 
 	//address offset: 108
 	/** This variable converts an angle in degrees into a corresponding
 	 * number of steps*/
-	float angleToStep;		
+	float angleToStep;	
 
 	//address offset: 112
 	/** This variable holds information on wether the motor is stalled or not.
 	0 = OK, 1 = stalled */
 	volatile bool stall;
 
-	//address offset: 113
-	volatile bool invertDir;
+	int32_t decelToAccelThreshold;
+	int32_t accelToCruiseThreshold;
+	int32_t cruiseToDecelThreshold;
+	int32_t decelToStopThreshold;
 
-	volatile float dropinStepSpeed;
+	volatile float currentPidSpeed;
+	volatile float currentPidAcceleration;
+	volatile float pidStepsSinceReset;
 	
+	volatile bool pidDisabled;
 
-	friend void TIMER2_COMPA_vect(void) __attribute__ ((signal,naked,used));
 	friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 	friend void interrupt0(void);
-	friend void PCINT2_vect(void) __attribute__ ((signal,used,naked));
-	friend void uStepperEncoder::setHome(void);
+	friend void uStepperEncoder::setHome(void);	
 
-	/**
-	 * @brief      Starts timer for stepper algorithm
-	 *
-	 *             This function actually doesn't start the timer for the
-	 *             stepper algorithm, as the timer is always running. Instead it
-	 *             clears the counter value, clears any pending interrupts and
-	 *             enables the timer compare match interrupt.
-	 */
-	void startTimer(void);
-	
 
-	/**
-	 * @brief      Stops the timer for the stepper algorithm.
-	 *
-	 *             As the startTimer() function, this function doesn't stop the
-	 *             timer, instead it disables the timer compare match interrupt
-	 *             bit in the timer registers, ensuring that the stepper
-	 *             algorithm will not run when the motor is not supposed to run.
-	 */
-	void stopTimer(void);
-	
 
 	/**
 	 * @brief      Enables the stepper driver output stage.
@@ -727,6 +579,8 @@ private:
 	 *             if enabled.
 	 */
 	void pid(int16_t deltaAngle);
+
+	void checkConnectorOrientation(void);
 
 public:			
 	/** Instantiate object for the encoder */
@@ -764,18 +618,6 @@ public:
 	 * @param      accel  - Maximum acceleration in steps/s^2
 	 */
 	void setMaxAcceleration(float accel);
-	
-
-	/**
-	 * @brief      Get the value of the maximum motor acceleration.
-	 *
-	 *             This function returns the maximum acceleration used by the
-	 *             stepper algorithm.
-	 *
-	 * @return     Maximum acceleration in steps/s^2
-	 */
-	float getMaxAcceleration(void);
-	
 
 	/**
 	 * @brief      Sets the maximum rotational velocity of the motor
@@ -788,19 +630,6 @@ public:
 	 * @param      vel   - Maximum rotational velocity of the motor in steps/s
 	 */
 	void setMaxVelocity(float vel);
-	
-
-	/**
-	 * @brief      Returns the maximum rotational velocity of the motor
-	 *
-	 *             This function returns the maximum rotational velocity the
-	 *             motor is allowed to run. In order to change this velocity,
-	 *             The function setMaximumVelocity() should be used.
-	 *
-	 * @return     maximum rotational velocity of the motor in steps/s.
-	 */
-	float getMaxVelocity(void);
-	
 
 	/**
 	 * @brief      Make the motor rotate continuously
@@ -850,7 +679,7 @@ public:
 	 * @param      holdMode  -	can be set to "HARD" for brake mode or "SOFT" for
 	 *                       freewheel mode (without the quotes).
 	 */
-	void hardStop(bool holdMode);
+	void hardStop(bool holdMode) __attribute__ ((deprecated("Function only here for compatibility with old code. this function is replaced by 'stop(bool brake)'")));
 	
 
 	/**
@@ -867,7 +696,7 @@ public:
 	 * @param      holdMode  -	can be set to "HARD" for brake mode or "SOFT" for
 	 *                       freewheel mode (without the quotes).
 	 */
-	void softStop(bool holdMode);
+	void softStop(bool holdMode) __attribute__ ((deprecated("Function only here for compatibility with old code. this function is replaced by 'stop(bool brake)'")));
 	
 
 	/**
@@ -885,6 +714,15 @@ public:
 	 *                       freewheel mode (without the quotes).
 	 */
 	void stop(bool brake = BRAKEON);
+
+	void setup(	uint8_t mode = NORMAL, 
+				uint8_t stepsPerRevolution = SIXTEEN, 
+				uint32_t faultTolerance __attribute__((unused)) = 10,
+				uint32_t faultHysteresis __attribute__((unused)) = 5, 
+				float pTerm = 1.0, 
+				float iTerm = 1.0, 
+				float dTerm = 0.0,
+				bool setHome = true) __attribute__ ((deprecated("Function only here for compatibility with old code. Use the new format for new code")));
 
 	/**
 	 * @brief      Initializes the different parts of the uStepper object
@@ -923,12 +761,10 @@ public:
 	 *								position is not reset.
 	 */
 	void setup(	uint8_t mode = NORMAL, 
-				uint8_t microStepping = SIXTEEN, 
-				float faultTolerance = 10.0,
-				float faultHysteresis = 5.0, 
-				float pTerm = 1.0, 
-				float iTerm = 0.02, 
-				float dTerm = 0.006,
+				float stepsPerRevolution = 3200.0, 
+				float pTerm = 0.75, 
+				float iTerm = 3.0, 
+				float dTerm = 0.0,
 				bool setHome = true);	
 
 	/**

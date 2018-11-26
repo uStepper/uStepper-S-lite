@@ -80,6 +80,7 @@ void Tmc2208::setup(void)
 	DDRD |= (1 << 4);			//Set Enable as output
 	DDRD |= (1 << 7);			//Set Step pin as output
 	DDRB |= (1 << 2);			//Set Dir pin as Output
+
 	this->disableDriver();
 	this->uartInit();
 	registerSetting = R00;
