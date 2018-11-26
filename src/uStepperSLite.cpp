@@ -537,7 +537,6 @@ void uStepperSLite::runContinous(bool dir)
 		{
 			this->accelToCruiseThreshold = this->decelToAccelThreshold - accelSteps;
 		}
-		Serial.println(startVelocity);
 		this->currentPidSpeed = startVelocity * this->stepsPerSecondToRPM;
 		this->state = state;
 		this->continous = 1;			//Set continous variable to 1, in order to let the interrupt routine now, that the motor should run continously
@@ -942,9 +941,7 @@ float uStepperSLite::moveToEnd(bool dir)
 		while(checks < 20)//allows for 2 checks on movement error
 		{
 			pos = abs(this->encoder.getAngleMoved() - (this->getStepsSinceReset()*this->stepToAngle));//see current position error
-			Serial.print(this->encoder.curSpeed);
-			Serial.print("   ");
-			Serial.println((((float)this->velocity * this->stepsPerSecondToRPM)/2.0));
+
 			if(abs(this->encoder.curSpeed) < (((float)this->velocity * this->stepsPerSecondToRPM)/2.0))//if position error is less than 5 steps it is okay...
 			{
 				checks++;
