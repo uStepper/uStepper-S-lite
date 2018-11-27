@@ -742,7 +742,7 @@ void uStepperSLite::checkConnectorOrientation(void)
 
 	PORTB |= (1 << 2);
 
-	for(i = 0; i < 10; i++)
+	for(i = 0; i < 30; i++)
 	{
 		PORTD |= (1 << 7);
 		delayMicroseconds(1);
@@ -759,7 +759,7 @@ void uStepperSLite::checkConnectorOrientation(void)
 
 	PORTB &= ~(1 << 2);
 
-	for(i = 0; i < 10; i++)
+	for(i = 0; i < 30; i++)
 	{
 		PORTD |= (1 << 7);
 		delayMicroseconds(1);
@@ -776,7 +776,7 @@ void uStepperSLite::checkConnectorOrientation(void)
 
 	PORTB |= (1 << 2);
 
-	for(i = 0; i < 10; i++)
+	for(i = 0; i < 30; i++)
 	{
 		PORTD |= (1 << 7);
 		delayMicroseconds(1);
