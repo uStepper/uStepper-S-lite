@@ -9,21 +9,39 @@ For more information, visit www.ustepper.com
 
 Installation is split into two parts - Hardware and Library. Both are required to use the uStepper S-lite boards.
 
-### Hardware Installation
+### Hardware Installation 
+
+### Instructions for users with the hardware for the original uStepper installed
 
 To add hardware support for uStepper in the Arduino IDE (1.8.5+) do the following:
  - Open Arduino
- - Open preferences
+ - Go to "Tools->Board->Boards Manager..."
+ - Search for "uStepper"
+ - Choose the "uStepper" board and press "Remove" button
+ - close the Boards Manager
+ - Go to "File->preferences"
+ - Almost at the bottom there is a field stating: "Additional Boards Manager URLs" replace your currently inserted uStepper URL this URL: https://raw.githubusercontent.com/uStepper/uStepperHardware/master/package_ustepper_index.json
+ - Press OK
+ - Go to "Tools->Board->Boards Manager..."
+ - Go to the bottom (after it has loaded new files) select "uStepper by ON Development IVS" and press install
+
+### Instructions for users new to uStepper
+
+To add hardware support for uStepper in the Arduino IDE (1.8.5+) do the following:
+ - Open Arduino
+ - Go to "File->preferences"
  - Almost at the bottom there is a field stating: "Additional Boards Manager URLs" insert this url: https://raw.githubusercontent.com/uStepper/uStepperHardware/master/package_ustepper_index.json
  - Press OK
- - Go into tools -> Boards and press "Boards Manager"
+ - Go to "Tools->Board->Boards Manager..."
  - Go to the bottom (after it has loaded new files) select "uStepper by ON Development IVS" and press install
 
 You have now added uStepper hardware support and should be able to select uStepper under tools -> boards.
 
 ### Library Installation
 
-	!!!!! Currently it is not possible to install this library from within the arduino IDE, but it will be during the next few days !!!!!!!!
+		### NB!
+		### Currently it is not possible to install this library from within the arduino IDE, 
+		### but it will be during the next few days
 
 To add the uStepper S-lite library do the following:
 - Download this repository as ZIP

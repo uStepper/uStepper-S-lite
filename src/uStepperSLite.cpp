@@ -830,6 +830,27 @@ void uStepperSLite::setup(	uint8_t mode,
 	this->driver.enableDriver();
 	_delay_ms(200);
 		
+	if((uint16_t)stepsPerRevolution == FULL)
+	{
+		stepsPerRevolution = 200.0;
+	}
+	else if((uint16_t)stepsPerRevolution == HALF)
+	{
+		stepsPerRevolution = 400.0;
+	}
+	else if((uint16_t)stepsPerRevolution == QUARTER)
+	{
+		stepsPerRevolution = 800.0;
+	}
+	else if((uint16_t)stepsPerRevolution == EIGHT)
+	{
+		stepsPerRevolution = 1600.0;
+	}
+	else if((uint16_t)stepsPerRevolution == SIXTEEN)
+	{
+		stepsPerRevolution = 3200.0;
+	}
+
 	this->stepConversion = (float)(stepsPerRevolution)/4096.0;	//Calculate conversion coefficient from raw encoder data, to actual moved steps
 	this->angleToStep = ((float)(stepsPerRevolution))/360.0;	//Calculate conversion coefficient from angle to corresponding number of steps
 	this->stepToAngle = 360.0/((float)(stepsPerRevolution));	//Calculate conversion coefficient from steps to corresponding angle
