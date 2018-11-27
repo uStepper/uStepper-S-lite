@@ -544,9 +544,9 @@ private:
 	volatile float currentPidSpeed;
 	volatile float currentPidAcceleration;
 	volatile float pidStepsSinceReset;
-	
+	volatile int32_t targetPosition;
 	volatile bool pidDisabled;
-
+	bool brake;
 	friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 	friend void interrupt0(void);
 	friend void uStepperEncoder::setHome(void);	

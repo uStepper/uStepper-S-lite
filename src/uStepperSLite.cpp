@@ -427,7 +427,7 @@ void uStepperSLite::setMaxAcceleration(float accel)
 		}
 		else						//If motor still needs to perform some steps
 		{
-			//this->moveSteps(this->totalSteps - this->currentStep + 1, this->direction, this->hold);	//we should make sure the motor gets to execute the remaining steps				
+			this->moveSteps(this->targetPosition - this->stepsSinceReset + 1, this->direction, this->brake);	//we should make sure the motor gets to execute the remaining steps				
 		}
 	}
 }
@@ -458,7 +458,7 @@ void uStepperSLite::setMaxVelocity(float vel)
 		}
 		else					//If motor still needs to perform some steps
 		{
-			//this->moveSteps(this->totalSteps - this->currentStep + 1, this->direction, this->hold);	//we should make sure it gets to execute these steps	
+			this->moveSteps(this->targetPosition - this->stepsSinceReset + 1, this->direction, this->brake);	//we should make sure the motor gets to execute the remaining steps	
 		}
 	}
 }
@@ -692,7 +692,11 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 		}
 		this->currentPidSpeed = startVelocity * this->stepsPerSecondToRPM;
 		this->state = state;
+		this->targetPosition = this->decelToStopThreshold;
+		this->brake = holdMode;
 		PORTD &= ~(1 << 4);
+		Serial.print("Target postion: ");
+		Serial.println(this->targetPosition);
 	sei();
 }
 
@@ -713,7 +717,8 @@ void uStepperSLite::stop(bool brake)
 	this->state = STOP;			//Set current state to STOP
 	this->continous = 0;	
 	this->stepsSinceReset = (int32_t)(this->encoder.getAngleMoved()*this->angleToStep);
-
+	this->targetPosition = this->stepsSinceReset;
+	this->brake = brake;
 	if(brake == BRAKEOFF)
 	{
 		this->disableMotor();

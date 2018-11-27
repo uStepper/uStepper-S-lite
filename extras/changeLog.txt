@@ -1,4 +1,4 @@
-Changelog - uStepper S Lite library
+Changelog - uStepper S-Lite library
 ----------------------------
 
 Version 0.1.0:	
