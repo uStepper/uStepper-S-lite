@@ -1,9 +1,36 @@
-# uStepper S Lite
+# uStepper S-lite
 
 The library contains support for driving the stepper, reading out encoder data. A few examples are included to show the functionality of the library.
 The library is supported and tested with in Arduino IDE 1.8.5.
 
 For more information, visit www.ustepper.com
+
+## Installation
+
+Installation is split into two parts - Hardware and Library. Both are required to use the uStepper S-lite boards.
+
+### Hardware Installation
+
+To add hardware support for uStepper in the Arduino IDE (1.8.5+) do the following:
+ - Open Arduino
+ - Open preferences
+ - Almost at the bottom there is a field stating: "Additional Boards Manager URLs" insert this url: https://raw.githubusercontent.com/uStepper/uStepperHardware/master/package_ustepper_index.json
+ - Press OK
+ - Go into tools -> Boards and press "Boards Manager"
+ - Go to the bottom (after it has loaded new files) select "uStepper by ON Development IVS" and press install
+
+You have now added uStepper hardware support and should be able to select uStepper under tools -> boards.
+
+### Library Installation
+
+	!!!!! Currently it is not possible to install this library from within the arduino IDE, but it will be during the next few days !!!!!!!!
+
+To add the uStepper S-lite library do the following:
+- Download this repository as ZIP
+- Open Arduino IDE (Version 1.8.5 or above)
+- Go to "Sketch->Include Library->Add .ZIP Library"
+- Browse to downloaded ZIP file
+- Click OK
 
 MORE INFORMATION WILL FOLLOW SOON!
 
