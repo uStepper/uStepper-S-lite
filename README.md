@@ -44,7 +44,7 @@ You have now added uStepper hardware support and should be able to select uStepp
 		### but it will be during the next few days
 
 To add the uStepper S-lite library do the following:
-- Download this repository as ZIP
+- Download the ZIP file at the following URL: https://github.com/uStepper/uStepper-S-lite/archive/0.1.0.zip
 - Open Arduino IDE (Version 1.8.5 or above)
 - Go to "Sketch->Include Library->Add .ZIP Library"
 - Browse to downloaded ZIP file
