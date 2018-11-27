@@ -695,8 +695,6 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 		this->targetPosition = this->decelToStopThreshold;
 		this->brake = holdMode;
 		PORTD &= ~(1 << 4);
-		Serial.print("Target postion: ");
-		Serial.println(this->targetPosition);
 	sei();
 }
 
