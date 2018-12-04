@@ -5,7 +5,7 @@ uint16_t value;
 
 void setup()
 {
-  servo.attach(10);     //Attach Servo to digital pin 10
+  servo.attach(A1);     //Attach Servo to A1
   Serial.begin(9600);
 }
 

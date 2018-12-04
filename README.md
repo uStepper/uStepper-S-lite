@@ -39,23 +39,31 @@ You have now added uStepper hardware support and should be able to select uStepp
 
 ### Library Installation
 
-		### NB!
-		### Currently it is not possible to install this library from within the arduino IDE, 
-		### but it will be during the next few days
-
 To add the uStepper S-lite library do the following:
-- Download the ZIP file at the following URL: https://github.com/uStepper/uStepper-S-lite/archive/0.1.0.zip
 - Open Arduino IDE (Version 1.8.5 or above)
-- Go to "Sketch->Include Library->Add .ZIP Library"
-- Browse to downloaded ZIP file
-- Click OK
+- Go to "Sketch->Include Library->Manage Libraries..."
+- Search for "uStepper S-lite"
+- Select "uStepper S-lite" and press install
+- Close Library Manager
 
-MORE INFORMATION WILL FOLLOW SOON!
+## Documentation
+Currently the documentation of this library is non-existing, but we are working on getting this part up to speed ASAP. For now, the documentation for the original uStepper can be used as a guideline, as these two libraries are much alike in usage:
+
+http://ustepper.com/docs/html/index.html
+
+## Known Bugs
+- Stall detection is currently not functioning properly
 
 ## Change Log
 
 0.1.0:	
 
 - Initial release
+
+0.1.1:
+
+- Updated uStepperServo example
+- Removed timer1 tampering from uStepperServo.cpp
+- Updated Readme
 
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" property="dct:title">uStepper</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="www.ustepper.com" property="cc:attributionName" rel="cc:attributionURL">ON Development</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.

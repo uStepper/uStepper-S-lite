@@ -3,3 +3,7 @@ Changelog - uStepper S-Lite library
 
 Version 0.1.0:	
 	- Initial release
+Version 0.1.1:
+	- Updated uStepperServo example
+	- Removed timer1 tampering from uStepperServo.cpp
+	- Updated Readme
