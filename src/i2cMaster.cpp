@@ -11,7 +11,6 @@ bool i2cMaster::cmd(uint8_t cmd)
 		i++;
 		if(i == 300)
 		{
-			//Serial.println("abe");
 			return false;
 		}
 	}

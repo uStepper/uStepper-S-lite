@@ -18,7 +18,7 @@ uStepperSLite stepper;
 void setup(void)
 {
   Serial.begin(115200);
-  stepper.setup(PID,3200.0,0.75,10.0,0.0,true);   //Initiate the stepper object to use closed loop PID control
+  stepper.setup(PID,3200.0,0.25,0.75,0.0,true);   //Initiate the stepper object to use closed loop PID control
                                                         //The behaviour of the controller can be adjusted by tuning 
                                                         //the P, I and D paramenters in this initiation (the three two parameters).
                                                         //check out the documentation:

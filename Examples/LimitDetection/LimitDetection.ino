@@ -24,7 +24,6 @@ void loop() {
   Serial.println(railLength*MMPRDEG);//find end positions and read out the recorded end position
   railLength = stepper.moveToEnd(CCW);    //Go to CCW end
   Serial.println(railLength*MMPRDEG);//find end positions and read out the recorded end position
-  stepper.moveToAngle(railLength/2, HARD); //Move to center
   
   while(1);
 }

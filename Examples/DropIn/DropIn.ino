@@ -18,7 +18,7 @@ uStepperSLite stepper;
 
 void setup(void)
 {
-	stepper.setup(DROPIN,3200.0,0.75,10.0,0.0,true);
+	stepper.setup(DROPIN,3200.0,0.25,0.75,0.0,true);
 }
 
 void loop(void)

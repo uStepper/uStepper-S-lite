@@ -188,8 +188,7 @@ void uStepperServo::refresh()
     // Figure about 4uS/uStepperServo after them. This could be compensated, but I feel
     // it is within the margin of error of software uStepperServos that could catch
     // an extra interrupt handler at any time.
-    TCCR1B &= ~(1 << CS10); 
-    //cli();
+
     for ( i = 0; i < count; i++) digitalWrite( s[i]->pin, 1);
 
     uint8_t start = TCNT0;
@@ -219,5 +218,4 @@ void uStepperServo::refresh()
 	    }
 	}
     }
-    TCCR1B |= (1 << CS10);
 }
