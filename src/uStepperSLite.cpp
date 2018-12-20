@@ -161,7 +161,7 @@ extern "C" {
 		pointer->encoder.angleMoved += deltaAngle;		
 
 		pointer->encoder.curSpeed *= 0.9;
-		pointer->encoder.curSpeed += 0.1 * (ENCODERINTFREQ * (float)deltaAngle) * ENCODERRAWTOANGLE;
+		pointer->encoder.curSpeed += 0.1 * (float)deltaAngle * DELTAANGLETORPM;
 
 		pointer->encoder.oldAngle = curAngle;
 
@@ -347,7 +347,6 @@ void uStepperEncoder::setHome(void)
 	this->oldAngle = 0;
 	this->angleMoved = 0;
 	this->angleMovedRaw = 0;
-	this->revolutions = 0;
 }
 
 float uStepperEncoder::getAngle()
@@ -542,6 +541,7 @@ void uStepperSLite::runContinous(bool dir)
 		this->continous = 1;			//Set continous variable to 1, in order to let the interrupt routine now, that the motor should run continously
 		PORTD &= ~(1 << 4);
 	sei();
+	this->pidDisabled = 0;
 }
 
 void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
@@ -696,6 +696,7 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 		this->brake = holdMode;
 		PORTD &= ~(1 << 4);
 	sei();
+	this->pidDisabled = 0;
 }
 
 void uStepperSLite::hardStop(bool holdMode)
@@ -714,7 +715,9 @@ void uStepperSLite::stop(bool brake)
 	this->stall = 0;
 	this->state = STOP;			//Set current state to STOP
 	this->continous = 0;	
-	this->stepsSinceReset = (int32_t)(this->encoder.getAngleMoved()*this->angleToStep);
+	this->pidDisabled = 1;
+	pointer->driver.setVelocity(0);
+	this->stepsSinceReset = (int32_t)((float)this->encoder.angleMoved * this->stepConversion);
 	this->targetPosition = this->stepsSinceReset;
 	this->brake = brake;
 	if(brake == BRAKEOFF)
@@ -1116,45 +1119,51 @@ void uStepperSLite::pid(int16_t deltaAngle)
 
 bool uStepperSLite::detectStall(float diff, bool running)
 {
-	static uint16_t checks = 0;
-	static float temp = 0.0;
-	uint32_t treshold = 100;
+	static uint8_t checks = 0;
 
-	if(treshold == 0)
-	{
-		return 0;
-	}
-	treshold *= treshold;
-	if(treshold >= 5000)
-	{
-		treshold = 5000;
-	}
+
 
 	if(running)
 	{
-		temp += diff;
-		checks++;
-
-		if( checks >= treshold)
+		if(this->getCurrentDirection() == CW)
 		{
-			temp /= (float)checks;
-
-			if(temp < 0.3 && temp > -0.3)
+			if(this->encoder.curSpeed < this->currentPidSpeed * 0.5)
 			{
-				this->stall = 1;
+				checks++;
+				if(checks >= 10)
+				{
+					checks = 10;
+					this->stall = 1;
+				}
 			}
 			else
 			{
+				checks = 0;
 				this->stall = 0;
 			}
-			temp = 0.0;
-			checks = 0;
 		}
+		else if(this->getCurrentDirection() == CCW)
+		{
+			if(this->encoder.curSpeed > this->currentPidSpeed * 0.5)
+			{
+				checks++;
+				if(checks >= 10)
+				{
+					checks = 10;
+					this->stall = 1;
+				}
+			}
+			else
+			{
+				checks = 0;
+				this->stall = 0;
+			}
+		}
+		
 	}
 	else
 	{
 		this->stall = 0;
-		temp = 0.0;
 		checks = 0;
 	}
 	return 0;

@@ -240,12 +240,6 @@
 #define DECEL 8							
 /** Value to put in state variable in order to indicate that the motor should be decelerating to full stop before changing direction */
 #define INITDECEL 16					
-/** Frequency of interrupt routine, in which the delays for the stepper algorithm are calculated */ 
-#define INTFREQ 28200.0f       			
-/** Period of interrupt routine for stepper algortihm*/
-#define INTPERIOD 1000000.0/INTFREQ		
-/** constant to calculate the amount of interrupts TIMER2 has to wait with generating new pulse, during PID error correction*/
-#define INTPIDDELAYCONSTANT 0.028199994 
 /** Value to put in direction variable in order for the stepper to turn clockwise */
 #define CW 0						
 /** Value to put in direction variable in order for the stepper to turn counterclockwise */	
@@ -254,17 +248,16 @@
 #define HARD 1							
 /** Value to put in hold variable in order for the motor to \b not block when it is not running */
 #define SOFT 0							
-
-#define ENCODERRAWTOANGLE 0.014648438
-
+/** Value to convert angle moved between samples to RPM. */
+#define DELTAANGLETORPM ENCODERINTFREQ*(60.0/4095.0)
+/** Value to put in hold variable in order for the motor to block when it is not running */
 #define BRAKEON 1
+/** Value to put in hold variable in order for the motor to \b not block when it is not running */
 #define BRAKEOFF 0
-
 /** Frequency at which the encoder is sampled, for keeping track of angle moved and current speed */
-#define ENCODERINTFREQ 1000.0		
+#define ENCODERINTFREQ 1000.0	
+/** Encoder Sample period, for keeping track of angle moved and current speed */	
 #define ENCODERINTSAMPLETIME 1.0/1000.0		
-/** Constant to convert angle difference between two interrupts to speed in revolutions per second */
-#define ENCODERSPEEDCONSTANT ENCODERINTFREQ/10.0/4096.0	
 /** I2C address of the encoder chip */
 #define ENCODERADDR 0x36				
 /** Address of the register, in the encoder chip, containing the 8 least significant bits of the stepper shaft angle */
@@ -275,8 +268,9 @@
 #define AGC 0x1A						
 /** Address of the register, in the encoder chip, containing the 8 least significant bits of magnetic field strength measured by the encoder chip */
 #define MAGNITUDE 0x1B	
-
+/**	P term in the PI filter estimating the step rate of incomming pulsetrain in DROPIN mode*/
 #define PULSEFILTERKP 60.0
+/**	I term in the PI filter estimating the step rate of incomming pulsetrain in DROPIN mode*/
 #define PULSEFILTERKI 1500.0*ENCODERINTSAMPLETIME
 
 /**
@@ -299,9 +293,7 @@ extern "C" void interrupt1(void);
  * @brief      Measures angle and speed of motor.
  *
  *             This interrupt routine is in charge of sampling the encoder and
- *             measure the current speed of the motor. In case of Dropin or PID
- *             feature this routine runs at a frequency of 500Hz while during
- *             normal operation it runs at a frequency of 1kHz.
+ *             measure the current speed of the motor. 
  */
 extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 
@@ -317,11 +309,13 @@ extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 class uStepperEncoder
 {
 public:
-	/** Variable used to store that measured angle moved from the
+	/** Variable used to store the raw angle moved from the
+	* reference position - This variable is not currently used, but might be later on */
+	volatile int32_t angleMovedRaw;
+
+	/** Variable used to store the angle moved from the
 	* reference position */
 	volatile int32_t angleMoved;	
-
-	volatile int32_t angleMovedRaw;	
 	
 	/** Angle of the shaft at the reference position. */
 	uint16_t encoderOffset;				
@@ -334,13 +328,9 @@ public:
 	/** This variable always contain the current rotor angle, relative
 	* to a single revolution */
 	volatile uint16_t angle;			
-	
-	/** This variable contains the number of revolutions in either
-	 * direction, since last home position was set. negative numbers
-	 * corresponds to CCW turns, and positive to CW turns */
-	volatile int16_t revolutions;		
+		
 
-	/** Variable used to store the last measured rotational speed of
+	/** Variable used to store the current rotational speed of
 	* the motor shaft */
 	volatile float curSpeed;			 	
 	/**
@@ -372,7 +362,7 @@ public:
 	 *             returning a variable. The speed is calculated in the
 	 *             interrupt routine associated with timer1.
 	 *
-	 * @return     Current speed in revolutions per second (RPS)
+	 * @return     Current speed in revolutions per minute (RPM)
 	 */
 	float getSpeed(void);
 	
@@ -426,6 +416,22 @@ public:
 	 */
 	float getAngleMoved(void);
 
+	/**
+	 * @brief      Measure the angle moved from reference position (unfiltered)
+	 *
+	 *             This function measures the angle moved from the shaft
+	 *             reference position. When the uStepper is first powered on,
+	 *             the reference position is reset to the current shaft
+	 *             position, meaning that this function will return the angle
+	 *             rotated with respect to the angle the motor initially had. It
+	 *             should be noted that this function is absolute to an
+	 *             arbitrary number of revolutions !
+	 *
+	 *             The reference position can be reset at any point in time, by
+	 *             use of the setHome() function.
+	 *
+	 * @return     The angle moved (unfiltered).
+	 */
 	float getAngleMovedRaw(void);
 	
 	/**
@@ -449,34 +455,30 @@ private:
 };
 
 /**
- * @brief      Prototype of class for accessing all features of the uStepper in
+ * @brief      Prototype of class for accessing all features of the uStepper S-lite in
  *             a single object.
  *
  *             This class enables the user of the library to access all features
- *             of the uStepper board, by use of a single object.
+ *             of the uStepper S-lite board, by use of a single object.
  */
 
 class uStepperSLite
 {
 private:
-	//Address offset: 10
 	/** This variable is used by the stepper algorithm to keep track of
 	 * which part of the acceleration profile the motor is currently
 	 * operating at. */
 	uint8_t state;		
 
-	//Address offset: 35
 	/** This variable tells the algorithm whether the motor should
 	 * rotated continuous or only a limited number of steps. If set to
 	 * 1, the motor will rotate continous. */
 	bool continous;					
 
-	//Address offset: 37
 	/** This variable tells the algorithm the direction of rotation for
 	 * the commanded move. */
 	bool direction;					
 	
-	//Address offset: 38
 	/**This variable contains an open-loop number of steps moved from
 	 * the position the motor had when powered on (or reset). a negative
 	 * value represents a rotation in the counter clock wise direction
@@ -484,23 +486,19 @@ private:
 	 * direction. */
 	volatile int32_t stepsSinceReset;
 
-		/** This variable contains the number of steps commanded by
+	/** This variable contains the number of steps commanded by
 	* external controller, in case of dropin feature */
 	volatile int32_t stepCnt;						
 
-	//Address offset: 56
 	/** This variable is used to indicate which mode the uStepper is
 	* running in (Normal, dropin or pid)*/
 	uint8_t mode;			
 
-	//Address offset: 57
 	/** This variable contains the maximum velocity, the motor is
 	 * allowed to reach at any given point. The user of the library can
-	 * set this by use of the setMaxVelocity() function, and get the
-	 * current value with the getMaxVelocity() function. */
+	 * set this by use of the setMaxVelocity() function */
 	float velocity;					
 
-	//Address offset: 61
 	/** This variable contains the maximum acceleration to be used. The
 	 * can be set and read by the user of the library using the
 	 * functions setMaxAcceleration() and getMaxAcceleration()
@@ -542,6 +540,7 @@ private:
 	int32_t decelToStopThreshold;
 
 	volatile float currentPidSpeed;
+	volatile float dropinPulseRate;
 	volatile float currentPidAcceleration;
 	volatile float pidStepsSinceReset;
 	volatile int32_t targetPosition;
