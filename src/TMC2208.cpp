@@ -88,7 +88,7 @@ void Tmc2208::setup(void)
 	this->writeRegister(TMC2208_GCONF, registerSetting);
 	registerSetting = 5000;
 	this->writeRegister(TMC2208_TPWMTHRS, registerSetting);
-	this->setCurrent(75,75);
+	this->setCurrent(50,50);
 	this->setVelocity(0);	
 }
 

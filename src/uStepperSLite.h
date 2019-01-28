@@ -534,10 +534,10 @@ private:
 	0 = OK, 1 = stalled */
 	volatile bool stall;
 
-	int32_t decelToAccelThreshold;
-	int32_t accelToCruiseThreshold;
-	int32_t cruiseToDecelThreshold;
-	int32_t decelToStopThreshold;
+	volatile int32_t decelToAccelThreshold;
+	volatile int32_t accelToCruiseThreshold;
+	volatile int32_t cruiseToDecelThreshold;
+	volatile int32_t decelToStopThreshold;
 
 	volatile float currentPidSpeed;
 	volatile float dropinPulseRate;
@@ -779,7 +779,7 @@ public:
 	 * @return     0 - Motor not rotating
 	 * @return     1 - Motor rotating
 	 */
-	bool getMotorState(void);
+	uint8_t getMotorState(void);
 	
 
 	/**

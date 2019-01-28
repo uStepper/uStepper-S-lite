@@ -1,5 +1,6 @@
 #include "i2cMaster.h"
 #include "Arduino.h"
+#include <util/delay.h>
 bool i2cMaster::cmd(uint8_t cmd)
 {
 	uint16_t i = 0;
@@ -9,10 +10,11 @@ bool i2cMaster::cmd(uint8_t cmd)
 	while (!(_SFR_MEM8(this->twcr) & (1 << TWINT1)))
 	{
 		i++;
-		if(i == 300)
+		if(i == 3000)
 		{
 			return false;
 		}
+		_delay_us(1);
 	}
 	
 	// save status bits
@@ -65,20 +67,21 @@ bool i2cMaster::read(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uin
 
 bool i2cMaster::write(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uint8_t *data)
 {
-	uint8_t i;	
+	uint8_t i = 0;	
 
+	Serial.println(i++);
 	if(this->start(slaveAddr, WRITE) == false)
 	{
 		this->stop();
 		return false;
 	}
-
+	Serial.println(i++);
 	if(this->writeByte(regAddr) == false)
 	{
 		this->stop();
 		return false;
 	}
-	
+	Serial.println(i++);
 	for(i = 0; i < numOfBytes; i++)
 	{
 		if(this->writeByte(*(data + i)) == false)
@@ -86,9 +89,11 @@ bool i2cMaster::write(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, ui
 			this->stop();
 			return false;
 		}
+		Serial.println(i++);
 	}
+	Serial.println(i++);
 	this->stop();
-
+	Serial.println(i++);
 	return 1;
 }
 
@@ -162,20 +167,23 @@ bool i2cMaster::stop(void)
 	//	issue stop condition
 	_SFR_MEM8(this->twcr) = (1 << TWINT1) | (1 << TWEN1) | (1 << TWSTO1);
 
+
 	// wait until stop condition is executed and bus released
 	while (_SFR_MEM8(this->twcr) & (1 << TWSTO1))
 	{
 		i++;
-		if(i == 30)
+		if(i == 1000)
 		{
 			return false;
 		}
+		_delay_us(1);
 	}
 
 	status = I2CFREE;
 
 	return 1;
 }
+
 
 uint8_t i2cMaster::getStatus(void)
 {
@@ -185,7 +193,29 @@ uint8_t i2cMaster::getStatus(void)
 void i2cMaster::begin(void)
 {
 	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
-	_SFR_MEM8(this->twbr) = 1;
+	_SFR_MEM8(this->twbr) = 30;
+	// no prescaler
+	_SFR_MEM8(this->twsr) &= 0xFC;
+}
+
+void i2cMaster::begin(bool channel)
+{
+	if(channel)
+	{
+		this->twsr = 0xD9;
+		this->twbr = 0xD8;
+		this->twdr = 0xDB;
+		this->twcr = 0xDC;	
+	}
+	else
+	{
+		this->twsr = 0xB9;
+		this->twbr = 0xB8;
+		this->twdr = 0xBB;
+		this->twcr = 0xBC;	
+	}
+	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
+	_SFR_MEM8(this->twbr) = 30;
 	// no prescaler
 	_SFR_MEM8(this->twsr) &= 0xFC;
 }
@@ -212,4 +242,9 @@ i2cMaster::i2cMaster(bool channel)
 		this->twdr = 0xBB;
 		this->twcr = 0xBC;	
 	}
+}
+
+i2cMaster::i2cMaster(void)
+{
+	
 }

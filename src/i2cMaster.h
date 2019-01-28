@@ -91,6 +91,17 @@ class i2cMaster
 		 *             this class, called "I2C".
 		 */
 		i2cMaster(bool channel);
+
+		/**
+		 * @brief      Constructor
+		 *
+		 *             This is the constructor, used to instantiate an I2C
+		 *             object. Under normal circumstances, this should not be
+		 *             needed by the programmer of the arduino sketch, since
+		 *             this library already has a global object instantiation of
+		 *             this class, called "I2C".
+		 */
+		i2cMaster(void);
 		
 		/**
 		 * @brief      Reads a byte from the I2C bus.
@@ -236,6 +247,15 @@ class i2cMaster
 		 *             encoder object.
 		 */
 		void begin(void);
+
+		/**
+		 * @brief      Setup TWI (I2C) interface
+		 *
+		 *             This function sets up the TWI interface, and is
+		 *             automatically called in the instantiation of the uStepper
+		 *             encoder object.
+		 */
+		void begin(bool channel);
 };
 
 #endif

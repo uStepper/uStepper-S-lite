@@ -72,7 +72,7 @@
 #include <math.h>
 uStepperSLite *pointer;
 i2cMaster I2C(1);
-
+float debug[5];
 extern "C" {
 
 	void interrupt1(void)
@@ -125,10 +125,7 @@ extern "C" {
 			sei();
 		}
 
-		tcnt1Diff = ((int16_t)TCNT1) - lastTcnt1;
-		lastTcnt1 = (int16_t)TCNT1;
-		sampleTime = ((float)(16000 + tcnt1Diff)) * 0.000625;
-		sampleTime *= 0.0001;
+		sampleTime = ENCODERINTSAMPLETIME;
 
 		if(I2C.getStatus() != I2CFREE)
 		{
@@ -185,7 +182,6 @@ extern "C" {
 		else
 		{
 			
-			
 			pointer->currentPidSpeed += pointer->currentPidAcceleration * sampleTime;
 			if(pointer->direction == CW)
 			{
@@ -202,8 +198,12 @@ extern "C" {
 				}
 			}
 			
+			
 			pointer->pidStepsSinceReset += (pointer->currentPidSpeed * pointer->RPMToStepsPerSecond) * sampleTime;
 			pointer->stepsSinceReset = (int32_t)(pointer->pidStepsSinceReset + 0.5);
+
+			
+
 			if(pointer->state == INITDECEL)
 			{
 				if(pointer->direction == CW)
@@ -272,16 +272,27 @@ extern "C" {
 					if(pointer->stepsSinceReset >= pointer->decelToStopThreshold)
 					{
 						pointer->state = STOP;
+						pointer->currentPidAcceleration = 0.0;
+						pointer->currentPidSpeed = 0.0;
 					}
-					pointer->currentPidAcceleration = -(pointer->acceleration * pointer->stepsPerSecondToRPM);
+					else
+					{
+						pointer->currentPidAcceleration = -(pointer->acceleration * pointer->stepsPerSecondToRPM);
+					}
 				} 
-				else
+				else if(pointer->direction == CCW)
 				{
 					if(pointer->stepsSinceReset <= pointer->decelToStopThreshold)
 					{
 						pointer->state = STOP;
+						pointer->currentPidAcceleration = 0.0;
+						pointer->currentPidSpeed = 0.0;
 					}
-					pointer->currentPidAcceleration = pointer->acceleration * pointer->stepsPerSecondToRPM;
+					else
+					{
+						pointer->currentPidAcceleration = pointer->acceleration * pointer->stepsPerSecondToRPM;
+					}
+					
 				}
 			}
 			else if(pointer->state == STOP)
@@ -298,7 +309,9 @@ extern "C" {
 			{
 				pointer->driver.setVelocity(pointer->currentPidSpeed);
 			}
+		
 			pointer->detectStall((float)deltaAngle, pointer->getMotorState());
+
 		}
 	}
 }
@@ -910,11 +923,11 @@ bool uStepperSLite::getCurrentDirection(void)
 	return this->direction;
 }
 
-bool uStepperSLite::getMotorState(void)
+uint8_t uStepperSLite::getMotorState(void)
 {
 	if(this->state != STOP)
 	{
-		return 1;		//Motor running
+		return this->state;		//Motor running
 	}
 
 	return 0;			//Motor not running
@@ -1061,6 +1074,8 @@ void uStepperSLite::pid(int16_t deltaAngle)
 	{
 		error = (((float)this->stepsSinceReset - ((float)this->encoder.angleMoved * this->stepConversion)));
 	}	
+
+
 
 	PORTD &= ~(1 << 4);
 

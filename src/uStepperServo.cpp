@@ -200,7 +200,7 @@ void uStepperServo::refresh()
 	uint16_t go = start + s[i]->pulse;// current time + pulse length for specific servo
 
 	// loop until we reach or pass 'go' time
-    
+    cli();
 	for (;;) {
 	    now = TCNT0;
 	    if ( now < last) base += 256;//Timer 0 tops at 255, so add 256 on overflow
@@ -208,14 +208,15 @@ void uStepperServo::refresh()
                   
         if(base + now >= go - 16)
         {
-            cli();
+            
         }
 
 	    if ( base+now > go) {
 		digitalWrite( s[i]->pin,0);
-        sei();
+        
 		break;
 	    }
 	}
+    sei();
     }
 }
