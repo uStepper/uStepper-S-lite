@@ -68,20 +68,16 @@ bool i2cMaster::read(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uin
 bool i2cMaster::write(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, uint8_t *data)
 {
 	uint8_t i = 0;	
-
-	Serial.println(i++);
 	if(this->start(slaveAddr, WRITE) == false)
 	{
 		this->stop();
 		return false;
 	}
-	Serial.println(i++);
 	if(this->writeByte(regAddr) == false)
 	{
 		this->stop();
 		return false;
 	}
-	Serial.println(i++);
 	for(i = 0; i < numOfBytes; i++)
 	{
 		if(this->writeByte(*(data + i)) == false)
@@ -89,11 +85,8 @@ bool i2cMaster::write(uint8_t slaveAddr, uint8_t regAddr, uint8_t numOfBytes, ui
 			this->stop();
 			return false;
 		}
-		Serial.println(i++);
 	}
-	Serial.println(i++);
 	this->stop();
-	Serial.println(i++);
 	return 1;
 }
 
@@ -124,7 +117,7 @@ bool i2cMaster::readByte(bool ack, uint8_t *data)
 bool i2cMaster::start(uint8_t addr, bool RW)
 {
 	// send START condition
-	this->cmd((1<<TWINT1) | (1<<TWSTA1) | (1<<TWEN1));
+	this->cmd((1<<TWINT1) | (1<<TWSTA1) | (1<<TWEN1) | (1 << TWEA1));
 
 	if (this->getStatus() != START && this->getStatus() != REPSTART) 
 	{
@@ -133,7 +126,7 @@ bool i2cMaster::start(uint8_t addr, bool RW)
 
 	// send device address and direction
 	_SFR_MEM8(this->twdr) = (addr << 1) | RW;
-	this->cmd((1 << TWINT1) | (1 << TWEN1));
+	this->cmd((1 << TWINT1) | (1 << TWEN1) | (1 << TWEA1));
 	
 	if (RW == READ) 
 	{
@@ -156,7 +149,7 @@ bool i2cMaster::writeByte(uint8_t data)
 {
 	_SFR_MEM8(this->twdr) = data;
 
-	this->cmd((1 << TWINT1) | (1 << TWEN1));
+	this->cmd((1 << TWINT1) | (1 << TWEN1) | (1 << TWEA1));
 
 	return this->getStatus() == TXDATAACK;
 }
@@ -193,7 +186,7 @@ uint8_t i2cMaster::getStatus(void)
 void i2cMaster::begin(void)
 {
 	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
-	_SFR_MEM8(this->twbr) = 30;
+	_SFR_MEM8(this->twbr) = 1;
 	// no prescaler
 	_SFR_MEM8(this->twsr) &= 0xFC;
 }
@@ -215,7 +208,7 @@ void i2cMaster::begin(bool channel)
 		this->twcr = 0xBC;	
 	}
 	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
-	_SFR_MEM8(this->twbr) = 30;
+	_SFR_MEM8(this->twbr) = 1;
 	// no prescaler
 	_SFR_MEM8(this->twsr) &= 0xFC;
 }

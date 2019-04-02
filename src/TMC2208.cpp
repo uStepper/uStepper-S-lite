@@ -20,7 +20,7 @@ uint8_t Tmc2208::calcCRC(uint8_t datagram[], uint8_t len) {
 void Tmc2208::writeRegister(uint8_t address, int32_t value)
 {
 	uint8_t writeData[8];
-	cli();
+	//cli();
 	writeData[0] = 0x05;                         // Sync byte
 	writeData[1] = 0x00;                         // Slave address
 	writeData[2] = address | TMC2208_WRITE_BIT;  // Register address with write bit set
@@ -34,7 +34,7 @@ void Tmc2208::writeRegister(uint8_t address, int32_t value)
 	{
 		this->uartSendByte(writeData[i]);	
 	}
-	sei();
+	//sei();
 }
 
 void Tmc2208::readRegister(uint8_t address, int32_t *value)
@@ -88,12 +88,13 @@ void Tmc2208::setup(void)
 	this->writeRegister(TMC2208_GCONF, registerSetting);
 	registerSetting = 5000;
 	this->writeRegister(TMC2208_TPWMTHRS, registerSetting);
-	this->setCurrent(50,50);
+	this->setCurrent(60,30);
 	this->setVelocity(0);	
 }
 
 void Tmc2208::invertDirection(bool normal)
 {
+	cli();
 	int32_t registerSetting;
 	registerSetting = R00;
 	if(normal == NORMALDIRECTION)
@@ -105,6 +106,7 @@ void Tmc2208::invertDirection(bool normal)
 		registerSetting |= TMC2208_PDN_DISABLE_MASK | TMC2208_INDEX_STEP_MASK | TMC2208_SHAFT_MASK;
 	}
 	this->writeRegister(TMC2208_GCONF, registerSetting);
+	sei();
 }
 
 void Tmc2208::enableDriver(void)

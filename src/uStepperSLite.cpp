@@ -71,61 +71,80 @@
 #include <uStepperSLite.h>
 #include <math.h>
 uStepperSLite *pointer;
+volatile int32_t *p __attribute__((used));
 i2cMaster I2C(1);
-float debug[5];
 extern "C" {
 
-	void interrupt1(void)
-	{
-		if(PIND & 0x04)
-		{
-			PORTD |= (1 << 4);
-		}
-		else
-		{
-			PORTD &= ~(1 << 4);
-		}
+void PCINT2_vect(void)
+{
+	if(pointer->currentPidSpeed > 0){
+	}
+	else{
 	}
 
-	void interrupt0(void)
-	{
-		if(PIND & 0x04)
-		{
-			PORTD |= (1 << 4);
-		}
-		else
-		{
-			PORTD &= ~(1 << 4);
-		}
-		if((PINB & (0x08)))			//CCW
-		{	
-			pointer->stepCnt--;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
-		}
-		else						//CW
-		{
-			pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)	
-		}
-	}
+	pointer->indexPulses++;
+}
 
-	void TIMER1_COMPA_vect(void)
+void INT0_vect(void)
+{
+	if(PIND & 0x04)
+	{
+		PORTD |= (1 << 4);
+	}
+	else
+	{
+		PORTD &= ~(1 << 4);
+	}
+	if((PINB & (0x08)))			//CCW
+	{
+		pointer->stepCnt--;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
+	}
+	else						//CW
+	{
+		pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)
+	}
+}
+void INT1_vect(void)
+{
+	if(PIND & 0x04)
+	{
+		PORTD |= (1 << 4);
+	}
+	else
+	{
+		PORTD &= ~(1 << 4);
+	}
+}
+
+void TIMER3_COMPA_vect(void)
+{
+	asm volatile("push r16 \n\t");
+	asm volatile("in r16,0x3F \n\t");
+	asm volatile("push r16 \n\t");
+	asm volatile("push r30 \n\t");
+	asm volatile("push r31 \n\t");
+	asm volatile("lds r30,p \n\t");
+	asm volatile("lds r31,p+1 \n\t");
+
+	asm volatile("jmp _stepGenerator \n\t");	//Execute the acceleration profile algorithm
+
+}
+
+void TIMER1_COMPA_vect(void)
 	{
 		uint8_t data[2];
 		uint16_t curAngle;
 		int16_t deltaAngle;
-		static uint16_t lastTcnt1;
-		int16_t tcnt1Diff;
 		float posError = 0.0;
-		float sampleTime;
 		static float posEst = 0.0;
 		static float velIntegrator = 0.0;
 		static float velEst = 0.0;
-
-		if(pointer->mode == DROPIN)
-		{
-			sei();
-		}
-
-		sampleTime = ENCODERINTSAMPLETIME;
+		uint32_t temp;
+		int32_t stepCntTemp;
+		int32_t pidTargetPositionTruncated;
+		int32_t *stepsSinceResetPointer;
+		float tempFloat;
+		sei();
 
 		if(I2C.getStatus() != I2CFREE)
 		{
@@ -149,75 +168,122 @@ extern "C" {
 		{
 			deltaAngle += 4096;
 		}
-		
+
 		else if(deltaAngle > 2047)
 		{
 			deltaAngle -= 4096;
 		}
 
-		pointer->encoder.angleMoved += deltaAngle;		
-
-		pointer->encoder.curSpeed *= 0.9;
-		pointer->encoder.curSpeed += 0.1 * (float)deltaAngle * DELTAANGLETORPM;
+		pointer->encoder.angleMoved -= deltaAngle;		//The AS5600 encoder counts in the opposite direction
+														//as the AEAT8800 (the encoder on uStepper S).
+														//Therefore it is subtracted here, so the two boards
+														//behave similar
 
 		pointer->encoder.oldAngle = curAngle;
 
 		if(pointer->mode == DROPIN)
 		{
-			posEst += velEst * sampleTime;
 			cli();
-			posError = (float)pointer->stepCnt - posEst;
+				stepCntTemp = pointer->stepCnt;
 			sei();
+
+			//		Speed filter
+			posEst += velEst * ENCODERINTSAMPLETIME;
+			posError = (float)stepCntTemp - posEst;
 			velIntegrator += posError * PULSEFILTERKI;
 			velEst = (posError * PULSEFILTERKP) + velIntegrator;
-			pointer->currentPidSpeed = (velIntegrator * pointer->stepsPerSecondToRPM);
+			pointer->currentPidSpeed = velIntegrator;
 
-			if(!pointer->pidDisabled)
-			{
-				pointer->pid(deltaAngle);
-			}
+			posError = (float)stepCntTemp - ((float)pointer->encoder.angleMoved * pointer->stepConversion);
 
-			pointer->detectStall((float)deltaAngle, pointer->getMotorState());
+			pointer->pidDropin(posError);
+			return;
 		}
 		else
 		{
-			
-			pointer->currentPidSpeed += pointer->currentPidAcceleration * sampleTime;
+			//		Speed filter
+			posEst += velEst * ENCODERINTSAMPLETIME;
+			posError = (float)pointer->encoder.angleMoved - posEst;
+			velIntegrator += posError * PULSEFILTERKI;
+			velEst = (posError * PULSEFILTERKP) + velIntegrator;
+			pointer->encoder.curSpeed = velIntegrator * pointer->stepConversion;
+
+			//stepGenerator speed integrator
+			pointer->currentPidSpeed += pointer->currentPidAcceleration;
 			if(pointer->direction == CW)
 			{
-				if(pointer->currentPidSpeed >= pointer->velocity * pointer->stepsPerSecondToRPM)
+				if(pointer->currentPidSpeed >= pointer->velocity)
 				{
-					pointer->currentPidSpeed = pointer->velocity * pointer->stepsPerSecondToRPM;
+					pointer->currentPidSpeed = pointer->velocity;
+				}
+				else if(pointer->currentPidSpeed < 0.0)
+				{
+					pointer->currentPidSpeed = 0.0;
 				}
 			}
 			else
 			{
-				if(pointer->currentPidSpeed <= -pointer->velocity * pointer->stepsPerSecondToRPM)
+				if(pointer->currentPidSpeed <= -pointer->velocity)
 				{
-					pointer->currentPidSpeed = -pointer->velocity * pointer->stepsPerSecondToRPM;
+					pointer->currentPidSpeed = -pointer->velocity;
+				}
+				else if(pointer->currentPidSpeed > 0.0)
+				{
+					pointer->currentPidSpeed = 0.0;
 				}
 			}
-			
-			
-			pointer->pidStepsSinceReset += (pointer->currentPidSpeed * pointer->RPMToStepsPerSecond) * sampleTime;
-			pointer->stepsSinceReset = (int32_t)(pointer->pidStepsSinceReset + 0.5);
 
-			
 
+			//stepgenerator targetposition integrator
+			pointer->pidTargetPosition += pointer->currentPidSpeed * ENCODERINTSAMPLETIME;
+
+			if(pointer->mode == PID)
+			{
+				pidTargetPositionTruncated = (int32_t)pointer->pidTargetPosition;
+				stepsSinceResetPointer = &pidTargetPositionTruncated;
+			}
+			else
+			{
+				stepsSinceResetPointer = &pointer->stepsSinceReset;
+			}
+
+			if(pointer->continous == 1)
+			{
+				pointer->targetPosition = (float)pointer->pidTargetPosition;
+			}
+			else
+			{
+				if(pointer->targetPosition < 0)
+				{
+					if(pointer->pidTargetPosition < (float)pointer->targetPosition)
+					{
+						pointer->pidTargetPosition = (float)pointer->targetPosition;
+					}
+				}
+				else
+				{
+					if(pointer->pidTargetPosition > (float)pointer->targetPosition)
+					{
+						pointer->pidTargetPosition = (float)pointer->targetPosition;
+					}
+				}
+			}
+
+			//acceleration profile generator
 			if(pointer->state == INITDECEL)
 			{
 				if(pointer->direction == CW)
 				{
-					pointer->currentPidAcceleration = (pointer->acceleration * pointer->stepsPerSecondToRPM);
-					if(pointer->stepsSinceReset >= pointer->decelToAccelThreshold)
+					pointer->currentPidAcceleration = pointer->acceleration * ENCODERINTSAMPLETIME;
+					if(*stepsSinceResetPointer >= pointer->decelToAccelThreshold)
 					{
 						pointer->state = ACCEL;
 					}
-				} 
+				}
 				else
 				{
-					pointer->currentPidAcceleration = -(pointer->acceleration * pointer->stepsPerSecondToRPM);
-					if(pointer->stepsSinceReset >= pointer->decelToAccelThreshold)
+					pointer->currentPidAcceleration = -(pointer->acceleration * ENCODERINTSAMPLETIME);
+					if(*stepsSinceResetPointer >= pointer->decelToAccelThreshold)
 					{
 						pointer->state = ACCEL;
 					}
@@ -228,90 +294,116 @@ extern "C" {
 			{
 				if(pointer->direction == CCW)
 				{
-					if(pointer->stepsSinceReset <= pointer->accelToCruiseThreshold)
+					if(*stepsSinceResetPointer <= pointer->accelToCruiseThreshold)
 					{
 						pointer->state = CRUISE;
 					}
-					pointer->currentPidAcceleration = -(pointer->acceleration * pointer->stepsPerSecondToRPM);
-				} 
+					pointer->currentPidAcceleration = -(pointer->acceleration * ENCODERINTSAMPLETIME);
+				}
 				else
 				{
-					if(pointer->stepsSinceReset >= pointer->accelToCruiseThreshold)
+					if(*stepsSinceResetPointer >= pointer->accelToCruiseThreshold)
 					{
 						pointer->state = CRUISE;
 					}
-					pointer->currentPidAcceleration = pointer->acceleration * pointer->stepsPerSecondToRPM;
+					pointer->currentPidAcceleration = pointer->acceleration * ENCODERINTSAMPLETIME;
 				}
 			}
 			else if(pointer->state == CRUISE)
 			{
-				if(pointer->direction == CCW)
-				{
-					if(pointer->stepsSinceReset <= pointer->cruiseToDecelThreshold)
-					{
-						pointer->state = DECEL;
-					}
-				} 
-				else
-				{
-					if(pointer->stepsSinceReset >= pointer->cruiseToDecelThreshold)
-					{
-						pointer->state = DECEL;
-					}
-				}
-				pointer->currentPidAcceleration = 0;
 				if(pointer->continous == 1)
 				{
 					pointer->state = CRUISE;
 				}
+				else
+				{
+					if(pointer->direction == CCW)
+					{
+						if(*stepsSinceResetPointer <= pointer->cruiseToDecelThreshold)
+						{
+							pointer->state = DECEL;
+						}
+					}
+					else
+					{
+						if(*stepsSinceResetPointer >= pointer->cruiseToDecelThreshold)
+						{
+							pointer->state = DECEL;
+						}
+					}
+				}
+
+				pointer->currentPidAcceleration = 0;
+
 			}
 			else if(pointer->state == DECEL)
 			{
 				if(pointer->direction == CW)
 				{
-					if(pointer->stepsSinceReset >= pointer->decelToStopThreshold)
+					if(*stepsSinceResetPointer >= pointer->decelToStopThreshold)
 					{
 						pointer->state = STOP;
-						pointer->currentPidAcceleration = 0.0;
-						pointer->currentPidSpeed = 0.0;
 					}
-					else
-					{
-						pointer->currentPidAcceleration = -(pointer->acceleration * pointer->stepsPerSecondToRPM);
-					}
-				} 
-				else if(pointer->direction == CCW)
+					pointer->currentPidAcceleration = -(pointer->acceleration * ENCODERINTSAMPLETIME);
+				}
+				else
 				{
-					if(pointer->stepsSinceReset <= pointer->decelToStopThreshold)
+					if(*stepsSinceResetPointer <= pointer->decelToStopThreshold)
 					{
 						pointer->state = STOP;
-						pointer->currentPidAcceleration = 0.0;
-						pointer->currentPidSpeed = 0.0;
 					}
-					else
-					{
-						pointer->currentPidAcceleration = pointer->acceleration * pointer->stepsPerSecondToRPM;
-					}
-					
+					pointer->currentPidAcceleration = pointer->acceleration * ENCODERINTSAMPLETIME;
 				}
 			}
 			else if(pointer->state == STOP)
 			{
 				pointer->currentPidAcceleration = 0.0;
 				pointer->currentPidSpeed = 0.0;
+				TCCR3B &= ~(1 << CS30);
+				if(pointer->mode == NORMAL)
+				{
+					if(pointer->brake == BRAKEON)
+					{
+						PORTD &= ~(1 << 4);
+					}
+					else
+					{
+						PORTD |= (1 << 4);
+					}
+				}
 			}
-			
-			if(!pointer->pidDisabled && pointer->mode == PID)
-			{
-				pointer->pid(deltaAngle);
-			}
-			else
-			{
-				pointer->driver.setVelocity(pointer->currentPidSpeed);
-			}
-		
-			pointer->detectStall((float)deltaAngle, pointer->getMotorState());
 
+			if(pointer->mode == PID)
+			{
+				tempFloat = (float)pointer->encoder.angleMoved * pointer->stepConversion;
+				pointer->stepsSinceReset = (int32_t)(tempFloat);
+				pointer->pid((float)pointer->pidTargetPosition - tempFloat);
+			}
+			if(pointer->mode == NORMAL || pointer->pidDisabled)
+			{
+				if(pointer->currentPidSpeed > 5.0)
+				{
+					temp = (uint32_t)((STEPGENERATORFREQUENCY/(pointer->currentPidSpeed)) + 0.5);
+					cli();
+						pointer->stepDelay = temp;
+					sei();
+				}
+				else if(pointer->currentPidSpeed < -5.0)
+				{
+					temp = (uint32_t)((STEPGENERATORFREQUENCY/(-pointer->currentPidSpeed)) + 0.5);
+					cli();
+						pointer->stepDelay = temp;
+					sei();
+				}
+				else
+				{
+					cli();
+						pointer->stepDelay = 20000;
+					sei();
+				}
+			}
+
+			pointer->detectStall();
 		}
 	}
 }
@@ -326,20 +418,22 @@ float uStepperEncoder::getAngleMoved(void)
 	return (float)this->angleMoved*0.087890625;
 }
 
-float uStepperEncoder::getAngleMovedRaw(void)
+float uStepperEncoder::getSpeed(bool unit)
 {
-	return (float)this->angleMovedRaw*0.087890625;
-}
-
-float uStepperEncoder::getSpeed(void)
-{
-	return this->curSpeed;
+	if(unit == RPM)
+	{
+		return this->curSpeed * pointer->stepsPerSecondToRPM;
+	}
+	else	//StepsPerSecond
+	{
+		return this->curSpeed;
+	}
 }
 
 void uStepperEncoder::setup()
 {
 	TCNT1 = 0;
-	ICR1 = 16000;
+	ICR1 = 32000;
 	TIFR1 = 0;
 	TIMSK1 = (1 << OCIE1A);
 	TCCR1A = (1 << WGM11);
@@ -349,17 +443,19 @@ void uStepperEncoder::setup()
 void uStepperEncoder::setHome(void)
 {
 	cli();
-	uint8_t data[2];
-	TIMSK1 &= ~(1 << OCIE1A);
-	I2C.read(ENCODERADDR, ANGLE, 2, data);
-	TIMSK1 |= (1 << OCIE1A);
-	this->encoderOffset = (((uint16_t)data[0]) << 8 ) | (uint16_t)data[1];
-
-	pointer->stepsSinceReset = 0;
-	this->angle = 0;
-	this->oldAngle = 0;
-	this->angleMoved = 0;
-	this->angleMovedRaw = 0;
+        uint8_t data[2];
+        TIMSK1 &= ~(1 << OCIE1A);
+        I2C.read(ENCODERADDR, ANGLE, 2, data);
+        TIMSK1 |= (1 << OCIE1A);
+        this->encoderOffset = (((uint16_t)data[0]) << 8 ) | (uint16_t)data[1];
+        pointer->stepsSinceReset = 0;
+        this->angle = 0;
+        this->oldAngle = 0;
+        this->angleMoved = 0;
+        pointer->pidTargetPosition = 0.0;
+        pointer->targetPosition = 0;
+        pointer->pidError = 0;
+	sei();
 }
 
 float uStepperEncoder::getAngle()
@@ -439,29 +535,30 @@ void uStepperSLite::setMaxAcceleration(float accel)
 		}
 		else						//If motor still needs to perform some steps
 		{
-			this->moveSteps(this->targetPosition - this->stepsSinceReset + 1, this->direction, this->brake);	//we should make sure the motor gets to execute the remaining steps				
+			this->moveSteps(this->targetPosition - this->stepsSinceReset + 1, this->direction, this->brake);	//we should make sure the motor gets to execute the remaining steps
 		}
 	}
 }
 
 void uStepperSLite::setMaxVelocity(float vel)
 {
-	
+
 	if(vel < 0.5005)
 	{
 		this->velocity = 0.5005;			//Limit velocity in order to not overflow delay variable
+
 	}
 
-	else if(vel > 28000.0)
+	else if(vel > 100000.0)
 	{
-		this->velocity = 28000.0;			//limit velocity in order to not underflow delay variable
+		this->velocity = 100000.0;			//limit velocity in order to not underflow delay variable
 	}
 
 	else
 	{
 		this->velocity = vel;
 	}
-	
+
 	if(this->state != STOP)		//If motor was running, we should make sure it runs again
 	{
 		if(this->continous == 1)	//If motor was running continously
@@ -470,7 +567,7 @@ void uStepperSLite::setMaxVelocity(float vel)
 		}
 		else					//If motor still needs to perform some steps
 		{
-			this->moveSteps(this->targetPosition - this->stepsSinceReset + 1, this->direction, this->brake);	//we should make sure the motor gets to execute the remaining steps	
+			this->moveSteps(this->targetPosition - this->stepsSinceReset + 1, this->direction, this->brake);	//we should make sure the motor gets to execute the remaining steps
 		}
 	}
 }
@@ -478,7 +575,7 @@ void uStepperSLite::setMaxVelocity(float vel)
 void uStepperSLite::runContinous(bool dir)
 {
 	float curVel, startVelocity = 0;
-	uint8_t state;
+	uint8_t tempState;
 	uint32_t accelSteps;
 	uint32_t initialDecelSteps;
 
@@ -487,36 +584,36 @@ void uStepperSLite::runContinous(bool dir)
 		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
 	}
 
-	curVel = this->currentPidSpeed * this->RPMToStepsPerSecond;
+	curVel = this->currentPidSpeed;
 
 	if(this->state == STOP)											//If motor is currently running at desired speed
 	{
 		initialDecelSteps = 0;
-		state = ACCEL;						//We should just run at cruise speed
+		tempState = ACCEL;						//We should just run at cruise speed
 		startVelocity = 0.0;//sqrt(2.0*this->acceleration);	//number of interrupts before the first step should be performed.
 		accelSteps = (uint32_t)((this->velocity * this->velocity)/(2.0*this->acceleration));	//Number of steps to bring the motor to max speed (S = (V^2 - V0^2)/(2*a)))
 
 	}
 	else if((dir == CW && curVel < 0) || (dir == CCW && curVel > 0))									//If motor turns CCW and should turn CW, or if motor turns CW and shoúld turn CCW
 	{
-		state = INITDECEL;									//We should decelerate the motor to full stop
+		tempState = INITDECEL;									//We should decelerate the motor to full stop
 		initialDecelSteps = (uint32_t)((curVel*curVel)/(2.0*this->acceleration));		//the amount of steps needed to bring the motor to full stop. (S = (V^2 - V0^2)/(2*-a)))
 		accelSteps = (uint32_t)((this->velocity * this->velocity)/(2.0*this->acceleration));									//Number of steps to bring the motor to max speed (S = (V^2 - V0^2)/(2*a)))
-		
+
 		startVelocity = curVel;//sqrt((curVel*curVel) + 2.0*this->acceleration);	//number of interrupts before the first step should be performed.
 	}
 	else if((dir == CW && curVel > 0) || (dir == CCW && curVel < 0))												//If the motor is currently rotating the same direction as the desired direction
 	{
 		if(abs(curVel) > this->velocity)						//If current velocity is greater than desired velocity
 		{
-			state = INITDECEL;						//We need to decelerate the motor to desired velocity
+			tempState = INITDECEL;						//We need to decelerate the motor to desired velocity
 			initialDecelSteps = (uint32_t)(((this->velocity*this->velocity) - (curVel*curVel))/(-2.0*this->acceleration));		//Number of steps to bring the motor down from current speed to max speed (S = (V^2 - V0^2)/(2*-a)))
 			accelSteps = 0;						//No acceleration phase is needed
 		}
 
 		else if(abs(curVel) < this->velocity)					//If the current velocity is less than the desired velocity
 		{
-			state = ACCEL;							//Start accelerating
+			tempState = ACCEL;							//Start accelerating
 			accelSteps = (uint32_t)(((this->velocity*this->velocity) - (curVel*curVel))/(2.0*this->acceleration));	//Number of Steps needed to accelerate from current velocity to full speed
 			initialDecelSteps = 0;
 		}
@@ -524,37 +621,53 @@ void uStepperSLite::runContinous(bool dir)
 		else 											//If motor is currently running at desired speed
 		{
 			initialDecelSteps = 0;
-			state = CRUISE;						//We should just run at cruise speed
+			tempState = CRUISE;						//We should just run at cruise speed
 			accelSteps = 0;						//No acceleration phase is needed
 		}
 	}
-
+	else
+	{
+		initialDecelSteps = 0;
+		tempState = ACCEL;						//We should just run at cruise speed
+		startVelocity = 0.0;//sqrt(2.0*this->acceleration);	//number of interrupts before the first step should be performed.
+		accelSteps = (uint32_t)((this->velocity * this->velocity)/(2.0*this->acceleration));	//Number of steps to bring the motor to max speed (S = (V^2 - V0^2)/(2*a)))
+	}
 	cli();
 		this->direction = dir;
+		this->stepGeneratorDirection = dir;
 
-		if(curVel < 0)
-		{
-			this->decelToAccelThreshold = this->stepsSinceReset - initialDecelSteps;
-		}
-		else
-		{
-			this->decelToAccelThreshold = this->stepsSinceReset + initialDecelSteps;
-		}
+		this->continous = 1;
 
 		if(dir == CW)
 		{
+			this->decelToAccelThreshold = this->targetPosition + initialDecelSteps;
 			this->accelToCruiseThreshold = this->decelToAccelThreshold + accelSteps;
+			PORTB |= (1 << 2);
 		}
 		else
 		{
+			this->decelToAccelThreshold = this->targetPosition - initialDecelSteps;
 			this->accelToCruiseThreshold = this->decelToAccelThreshold - accelSteps;
+			PORTB &= ~(1 << 2);
 		}
-		this->currentPidSpeed = startVelocity * this->stepsPerSecondToRPM;
-		this->state = state;
-		this->continous = 1;			//Set continous variable to 1, in order to let the interrupt routine now, that the motor should run continously
-		PORTD &= ~(1 << 4);
+		this->currentPidSpeed = startVelocity;
+		if(pointer->currentPidSpeed > 5.0)
+		{
+			pointer->stepDelay = (uint32_t)((STEPGENERATORFREQUENCY/(pointer->currentPidSpeed)) + 0.5);
+		}
+		else if(pointer->currentPidSpeed < -5.0)
+		{
+			pointer->stepDelay = (uint32_t)((STEPGENERATORFREQUENCY/(-pointer->currentPidSpeed)) + 0.5);
+		}
+		else
+		{
+			pointer->stepDelay = 20000;
+		}
+		this->state = tempState;
 	sei();
-	this->pidDisabled = 0;
+
+	PORTD &= ~(1 << 4);
+	TCCR3B |= (1 << CS30);
 }
 
 void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
@@ -577,23 +690,26 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 		return;
 	}
 	totalSteps = steps;
-	curVel = this->currentPidSpeed * this->RPMToStepsPerSecond;
+	cli();
+		curVel = this->currentPidSpeed;
+	sei();
 	steps--;
+	initialDecelSteps = 0;
 
 	if(this->state == STOP)								//If motor is currently at full stop (state = STOP)
 	{
 		state = ACCEL;
 		accelSteps = (uint32_t)((this->velocity * this->velocity)/(2.0*this->acceleration));	//Number of steps to bring the motor to max speed (S = (V^2 - V0^2)/(2*a)))
-		initialDecelSteps = 0;		//No initial deceleration phase needed
+				//No initial deceleration phase needed
 
-		if((int32_t)accelSteps > (totalSteps >> 1))	//If we need to accelerate for longer than half of the total steps, we need to start decelerating before we reach max speed
+		if(accelSteps > (totalSteps >> 1))	//If we need to accelerate for longer than half of the total steps, we need to start decelerating before we reach max speed
 		{
 			cruiseSteps = 0; 		//No cruise phase needed
 			accelSteps = decelSteps = (totalSteps >> 1);				//Accelerate and decelerate for the same amount of steps (half the total steps)
-			accelSteps += totalSteps - accelSteps - decelSteps;	//if there are still a step left to perform, due to rounding errors, do this step as an acceleration step	
+			accelSteps += totalSteps - accelSteps - decelSteps;	//if there are still a step left to perform, due to rounding errors, do this step as an acceleration step
 		}
 
-		else								
+		else
 		{
 			decelSteps = accelSteps;	//If top speed is reached before half the total steps are performed, deceleration period should be same length as acceleration period
 			cruiseSteps = totalSteps - accelSteps - decelSteps;	//Perform remaining steps as cruise steps
@@ -610,7 +726,7 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 		if(accelSteps > (totalSteps >> 1))			//If we need to accelerate for longer than half of the total steps, we need to start decelerating before we reach max speed
 		{
 			accelSteps = decelSteps = (totalSteps >> 1);	//Accelerate and decelerate for the same amount of steps (half the total steps)
-			accelSteps += totalSteps - accelSteps - decelSteps;				//If there are still a step left to perform, due to rounding errors, do this step as an acceleration step	
+			accelSteps += totalSteps - accelSteps - decelSteps;				//If there are still a step left to perform, due to rounding errors, do this step as an acceleration step
 			cruiseSteps = 0;
 		}
 		else
@@ -618,8 +734,7 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 			decelSteps = accelSteps;					//If top speed is reached before half the total steps are performed, deceleration period should be same length as acceleration period
 			cruiseSteps = totalSteps - accelSteps - decelSteps; 			//Perform remaining steps, as cruise steps
 		}
-
-		startVelocity = sqrt((curVel*curVel) + 2.0*this->acceleration);	//number of interrupts before the first step should be performed.
+		startVelocity = curVel; //sqrt((curVel*curVel) + 2.0*this->acceleration);	//number of interrupts before the first step should be performed.
 	}
 	else if((dir == CW && curVel > 0) || (dir == CCW && curVel < 0))							//If the motor is currently rotating the same direction as desired, we dont necessarily need to decelerate
 	{
@@ -643,13 +758,14 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 
 		else if(abs(curVel) < this->velocity)	//If current velocity is less than desired velocity
 		{
+
 			state = ACCEL;			//Start accelerating
-			accelSteps = (uint32_t)((((this->velocity*this->velocity) - curVel*curVel))/(2.0*this->acceleration));	//Number of Steps needed to accelerate from current velocity to full speed
+			accelSteps = (int32_t)((((this->velocity*this->velocity) - curVel*curVel))/(2.0*this->acceleration));	//Number of Steps needed to accelerate from current velocity to full speed
 
 			if(accelSteps > (totalSteps >> 1))			//If we need to accelerate for longer than half of the total steps, we need to start decelerating before we reach max speed
 			{
 				accelSteps = decelSteps = (totalSteps >> 1);	//Accelerate and decelerate for the same amount of steps (half the total steps)
-				accelSteps += totalSteps - accelSteps - decelSteps;				//If there are still a step left to perform, due to rounding errors, do this step as an acceleration step	
+				accelSteps += totalSteps - accelSteps - decelSteps;				//If there are still a step left to perform, due to rounding errors, do this step as an acceleration step
 				cruiseSteps = 0;
 			}
 			else
@@ -664,14 +780,16 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 
 		else						//If current velocity is equal to desired velocity
 		{
+
 			state = CRUISE;	//We are already at desired speed, therefore we start at cruise phase
-			decelSteps = (uint32_t)((this->velocity*this->velocity)/(2.0*this->acceleration));	//Number of steps needed to decelerate the motor from top speed to full stop
+			decelSteps = (int32_t)((this->velocity*this->velocity)/(2.0*this->acceleration));	//Number of steps needed to decelerate the motor from top speed to full stop
 			accelSteps = 0;	//No acceleration phase needed
 			initialDecelSteps = 0;		//No initial deceleration phase needed
 
 			if(decelSteps >= totalSteps)
 			{
 				cruiseSteps = 0;
+				decelSteps = totalSteps;
 			}
 			else
 			{
@@ -679,42 +797,72 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 			}
 		}
 	}
-	cli();
-		this->direction = dir;
-		this->continous = 0;			
-		if(curVel < 0)
+	else
+	{
+		state = ACCEL;
+		accelSteps = (uint32_t)((this->velocity * this->velocity)/(2.0*this->acceleration));	//Number of steps to bring the motor to max speed (S = (V^2 - V0^2)/(2*a)))
+				//No initial deceleration phase needed
+
+		if(accelSteps > (totalSteps >> 1))	//If we need to accelerate for longer than half of the total steps, we need to start decelerating before we reach max speed
 		{
-			this->decelToAccelThreshold = this->stepsSinceReset - initialDecelSteps;
+			cruiseSteps = 0; 		//No cruise phase needed
+			accelSteps = decelSteps = (totalSteps >> 1);				//Accelerate and decelerate for the same amount of steps (half the total steps)
+			accelSteps += totalSteps - accelSteps - decelSteps;	//if there are still a step left to perform, due to rounding errors, do this step as an acceleration step
 		}
+
 		else
 		{
-			this->decelToAccelThreshold = this->stepsSinceReset + initialDecelSteps;
+			decelSteps = accelSteps;	//If top speed is reached before half the total steps are performed, deceleration period should be same length as acceleration period
+			cruiseSteps = totalSteps - accelSteps - decelSteps;	//Perform remaining steps as cruise steps
 		}
+		startVelocity = 0.0;
+	}
+	cli();
+		this->direction = dir;
+		this->stepGeneratorDirection = dir;
+
+		this->continous = 0;
 
 		if(dir == CW)
 		{
+			this->decelToAccelThreshold = this->targetPosition + initialDecelSteps;
 			this->accelToCruiseThreshold = this->decelToAccelThreshold + accelSteps;
 			this->cruiseToDecelThreshold = this->accelToCruiseThreshold + cruiseSteps;
 			this->decelToStopThreshold = this->cruiseToDecelThreshold + decelSteps;
+			PORTB |= (1 << 2);
 		}
 		else
 		{
+			this->decelToAccelThreshold = this->targetPosition - initialDecelSteps;
 			this->accelToCruiseThreshold = this->decelToAccelThreshold - accelSteps;
 			this->cruiseToDecelThreshold = this->accelToCruiseThreshold - cruiseSteps;
 			this->decelToStopThreshold = this->cruiseToDecelThreshold - decelSteps;
+			PORTB &= ~(1 << 2);
 		}
-		this->currentPidSpeed = startVelocity * this->stepsPerSecondToRPM;
+		this->currentPidSpeed = startVelocity;
+		if(pointer->currentPidSpeed > 5.0)
+		{
+			pointer->stepDelay = (uint32_t)((STEPGENERATORFREQUENCY/(pointer->currentPidSpeed)) + 0.5);
+		}
+		else if(pointer->currentPidSpeed < -5.0)
+		{
+			pointer->stepDelay = (uint32_t)((STEPGENERATORFREQUENCY/(-pointer->currentPidSpeed)) + 0.5);
+		}
+		else
+		{
+			pointer->stepDelay = 20000;
+		}
 		this->state = state;
 		this->targetPosition = this->decelToStopThreshold;
 		this->brake = holdMode;
-		PORTD &= ~(1 << 4);
 	sei();
-	this->pidDisabled = 0;
+
+	PORTD &= ~(1 << 4);
+	TCCR3B |= (1 << CS30);
 }
 
 void uStepperSLite::hardStop(bool holdMode)
 {
-
 	this->stop(holdMode);
 }
 
@@ -725,19 +873,20 @@ void uStepperSLite::stop(bool brake)
 		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
 	}
 
+
+	TCCR3B &= ~(1 << CS30);
+	pointer->driver.setVelocity(0);
+	this->targetPosition = this->stepsSinceReset;
+	pointer->cruiseToDecelThreshold = this->targetPosition;
+	this->brake = brake;
 	this->stall = 0;
 	this->state = STOP;			//Set current state to STOP
-	this->continous = 0;	
-	this->pidDisabled = 1;
-	pointer->driver.setVelocity(0);
-	this->stepsSinceReset = (int32_t)((float)this->encoder.angleMoved * this->stepConversion);
-	this->targetPosition = this->stepsSinceReset;
-	this->brake = brake;
+	this->continous = 0;
 	if(brake == BRAKEOFF)
 	{
 		this->disableMotor();
 	}
-	
+
 	else if (brake == BRAKEON)
 	{
 		this->enableMotor();
@@ -750,7 +899,7 @@ void uStepperSLite::softStop(bool holdMode)
 	this->stop(holdMode);
 }
 
-void uStepperSLite::checkConnectorOrientation(void)
+void uStepperSLite::checkConnectorOrientation(uint8_t mode)
 {
 	uint8_t data[2], i;
 	uint16_t angle;
@@ -759,7 +908,7 @@ void uStepperSLite::checkConnectorOrientation(void)
 	I2C.read(ENCODERADDR, ANGLE, 2, data);
 	angle = (((uint16_t)data[0]) << 8 ) | (uint16_t)data[1];
 
-	PORTB |= (1 << 2);
+	PORTB &= ~(1 << 2);
 
 	for(i = 0; i < 50; i++)
 	{
@@ -776,7 +925,7 @@ void uStepperSLite::checkConnectorOrientation(void)
 
 	angleDiff[0] -= (int16_t)angle;
 
-	PORTB &= ~(1 << 2);
+	PORTB |= (1 << 2);
 
 	for(i = 0; i < 50; i++)
 	{
@@ -793,24 +942,7 @@ void uStepperSLite::checkConnectorOrientation(void)
 
 	angleDiff[1] -= (int16_t)angle;
 
-	PORTB |= (1 << 2);
-
-	for(i = 0; i < 50; i++)
-	{
-		PORTD |= (1 << 7);
-		delayMicroseconds(1);
-		PORTD &= ~(1 << 7);
-		_delay_ms(10);
-	}
-
-	angleDiff[2] = (int16_t)angle;
-
-	I2C.read(ENCODERADDR, ANGLE, 2, data);
-	angle = (((uint16_t)data[0]) << 8 ) | (uint16_t)data[1];
-
-	angleDiff[2] -= (int16_t)angle;
-
-	for(i = 0; i < 3; i++)
+	for(i = 0; i < 2; i++)
 	{
 		if(angleDiff[i] > 2048)
 		{
@@ -822,19 +954,30 @@ void uStepperSLite::checkConnectorOrientation(void)
 		}
 	}
 
-	if(!(angleDiff[0] < -2 && angleDiff[1] > 2 && angleDiff[2] < -2))
+	if((angleDiff[0] > 2 && angleDiff[1] < -2))
 	{
-		this->driver.invertDirection();
+		if(mode == DROPIN)
+		{
+			this->driver.invertDirection();
+		}
+	}
+	else
+	{
+		if(mode != DROPIN)
+		{
+			this->driver.invertDirection();
+		}
 	}
 }
 
-void uStepperSLite::setup(	uint8_t mode, 
+void uStepperSLite::setup(	uint8_t mode,
 							float stepsPerRevolution,
-							float pTerm, 
+							float pTerm,
 							float iTerm,
 							float dTerm,
 							bool setHome)
 {
+	p = &(this->stepsSinceReset);
 	this->pidDisabled = 1;
 	this->mode = mode;
 	this->encoder.setup();
@@ -843,7 +986,7 @@ void uStepperSLite::setup(	uint8_t mode,
 	this->driver.setup();
 	this->driver.enableDriver();
 	_delay_ms(200);
-		
+
 	if((uint16_t)stepsPerRevolution == FULL)
 	{
 		stepsPerRevolution = 200.0;
@@ -870,41 +1013,41 @@ void uStepperSLite::setup(	uint8_t mode,
 	this->stepToAngle = 360.0/((float)(stepsPerRevolution));	//Calculate conversion coefficient from steps to corresponding angle
 	this->stepsPerSecondToRPM = 60.0/stepsPerRevolution;
 	this->RPMToStepsPerSecond = stepsPerRevolution/60.0;
-	this->encoder.setHome();
-	this->checkConnectorOrientation();
+	this->RPMToStepDelay = STEPGENERATORFREQUENCY/this->RPMToStepsPerSecond;
+	this->indexPulseSize = (uint8_t)(stepsPerRevolution/50.0);
 	this->encoder.setHome();
 
-	if(setHome)
-	{
-		this->encoder.setHome();	
-	}
-	else
-	{
-		pointer->stepsSinceReset = ((float)this->encoder.angleMoved * this->stepConversion) + 0.5;
-	}
+	this->checkConnectorOrientation(mode);
+	this->encoder.setHome();
 
 	if(this->mode)
 	{
 		if(this->mode == DROPIN)
 		{
 			//Set Enable, Step and Dir signal pins from 3dPrinter controller as inputs
-			pinMode(2,INPUT);		
+			pinMode(2,INPUT);
 			pinMode(3,INPUT);
 			pinMode(4,INPUT);
 			//Enable internal pull-up resistors on the above pins
 			digitalWrite(2,HIGH);
 			digitalWrite(3,HIGH);
 			digitalWrite(4,HIGH);
-			attachInterrupt(0, interrupt0, FALLING);
-			attachInterrupt(1, interrupt1, CHANGE);
-		}		
+			EICRA = 0x06;
+			EIMSK = 0x03;
+		}
 
 		//Scale supplied controller coefficents. This is done to enable the user to use easier to manage numbers for these coefficients.
-	    this->pTerm = pTerm; 
-	    this->iTerm = iTerm * ENCODERINTSAMPLETIME;    
-	    this->dTerm = dTerm * ENCODERINTFREQ;    
+	    this->pTerm = pTerm;
+		this->iTerm = iTerm * ENCODERINTSAMPLETIME;
+	    this->dTerm = dTerm * ENCODERINTFREQ;
 	}
 	this->pidDisabled = 0;
+	TCNT3 = 0;
+	ICR3 = 159;
+	TIFR3 = 0;
+	TIMSK3 = (1 << OCIE3A);
+	TCCR3A = (1 << WGM31);
+	TCCR3B = (1 << WGM32) | (1 << WGM33);
 	sei();
 }
 
@@ -953,55 +1096,39 @@ void uStepperSLite::setRunCurrent(uint8_t runCurrent)
 	this->driver.setHoldCurrent(runCurrent);
 }
 
+//Skal Gennemgås !
 float uStepperSLite::moveToEnd(bool dir)
 {
 	uint8_t checks = 0;
   	float pos = 0.0;
   	float lengthMoved;
+  	float tempVelocity;
 
   	if(this->mode == DROPIN)
   	{
   		return 0.0;		//Doesn't make sense in dropin mode
   	}
-
+  	tempVelocity = this->velocity;
+  	if(this->velocity > 500.0)
+  	{
+  		//this->setMaxVelocity(500.0);
+  	}
   	lengthMoved = this->encoder.getAngleMoved();
-  	
+
   	this->stop(HARD);
 	_delay_ms(50);
   	this->runContinous(dir);
+  	_delay_ms(200);
+	while(!this->isStalled());
+	this->stop(SOFT);//stop motor without brake
 
-  	if(this->mode == PID)
-  	{
-  		while(!this->isStalled());
-  		this->stop(SOFT);//stop motor without brake
-  	}
-  	else
-  	{
-  		delay(100);
-		while(checks < 20)//allows for 2 checks on movement error
-		{
-			pos = abs(this->encoder.getAngleMoved() - (this->getStepsSinceReset()*this->stepToAngle));//see current position error
-
-			if(abs(this->encoder.curSpeed) < (((float)this->velocity * this->stepsPerSecondToRPM)/2.0))//if position error is less than 5 steps it is okay...
-			{
-				checks++;
-			}
-			else //if position error is 5 steps or more, count up checks
-			{
-		  		checks = 0;
-			}
-			delay(1);
-		}
-
-	  	this->stop(SOFT);//stop motor without brake
-  	}
-  	
 	this->moveSteps(20, !dir, SOFT);
 	while(this->getMotorState())
 	{
 		_delay_ms(1);
 	}
 	_delay_ms(100);
+	//this->setMaxVelocity(tempVelocity);
 	if(dir == CW)
 	{
 		lengthMoved = this->encoder.getAngleMoved() - lengthMoved;
@@ -1027,7 +1154,7 @@ void uStepperSLite::moveToAngle(float angle, bool holdMode)
 
 	diff = angle - this->encoder.getAngleMoved();
 	steps = (uint32_t)((abs(diff)*angleToStep) + 0.5);
-	
+
 	if(diff < 0.0)
 	{
 		this->moveSteps(steps, CCW, holdMode);
@@ -1054,134 +1181,269 @@ void uStepperSLite::moveAngle(float angle, bool holdMode)
 	}
 }
 
-void uStepperSLite::pid(int16_t deltaAngle)
+void uStepperSLite::pid(float error)
 {
-	static float output;
-	float error;
-	static float accumError = 0.0;
-	float integral;
+	float u, uSat, temp;
+	float limit = abs(this->currentPidSpeed) + 6000.0;
+	static float integral;
 	static bool integralReset = 0;
-	int32_t stepCnt;
 
-	if(this->mode == DROPIN)
+	if(this->pidDisabled)
 	{
-		cli();
-			stepCnt = this->stepCnt;
-		sei();
-		error = (((float)stepCnt - ((float)this->encoder.angleMoved * this->stepConversion))); 
+		integral = 0.0;
+		integralReset = 0;
+		this->currentPidError = 0.0;
+		if(this->state == STOP)
+		{
+			if(this->brake == BRAKEON)
+			{
+				PORTD &= ~(1 << 4);
+			}
+			else
+			{
+				PORTD |= (1 << 4);
+			}
+		}
+		
+		return;
 	}
-	else
-	{
-		error = (((float)this->stepsSinceReset - ((float)this->encoder.angleMoved * this->stepConversion)));
-	}	
-
-
 
 	PORTD &= ~(1 << 4);
 
-	if(error > -2.0 && error < 2.0)
+	this->currentPidError = error;
+
+	u = error*this->pTerm;
+
+	if(u > 0.0)
 	{
-		accumError = 0.0;
+		if(u > limit)
+		{
+			u = limit;
+		}
+	}
+	else if(u < 0.0)
+	{
+		if(u < -limit)
+		{
+			u = -limit;
+		}
+	}
+
+	integral += error*this->iTerm;
+
+	if(integral > 10000.0)
+	{
+		integral = 10000.0;
+	}
+	else if(integral < -10000.0)
+	{
+		integral = -10000.0;
+	}
+
+	u += integral;
+
+	if(u > 100000 || u < -100000)
+	{
+		uSat = 100000;
+		uSat = ((u > 0) - (u < 0)) * uSat;
 	}
 	else
 	{
-		if(!(error > 10.0 || error < -10.0))
+		uSat = u;
+	}
+
+	if(error < -2.0 || error > 2.0)
+	{
+		if(error < 0.0)
 		{
-			if(!integralReset)
+			if(error < -255.0)
 			{
-				accumError = 0.0;
+				this->pidError = 255;
 			}
-			integralReset = 1;
+			else
+			{
+				this->pidError = (uint8_t)-error;
+			}
 		}
-		
 		else
 		{
-			integralReset = 0;
+			if(error > 255.0)
+			{
+				this->pidError = 255;
+			}
+			else
+			{
+				this->pidError = (uint8_t)error;
+			}
 		}
-	}
-
-	if(output <= -100.0)
-	{
-		integral = (this->iTerm * (10000.0/(output*output))) * error;
-	}
-	else if(output >= 100.0)
-	{
-		integral = (this->iTerm * (10000.0/(output*output))) * error;
+		TCCR3B |= (1 << CS30);
 	}
 	else
 	{
-		integral = this->iTerm * error;
-	}
-	accumError += integral;
 
-	if(accumError > 20000.0)
+		if(this->state == STOP)
+		{
+			TCCR3B &= ~(1 << CS30);
+		}
+		this->pidError = 0;
+	}
+
+	if(uSat > 5.0)
 	{
-		accumError = 20000.0;
+		temp = (uint32_t)((STEPGENERATORFREQUENCY/uSat) + 0.5);
+		this->stepGeneratorDirection = CW;
+
+		cli();
+		pointer->stepDelay = temp;
+		sei();
 	}
-	else if(accumError < -20000.0)
+	else if(uSat < -5.0)
 	{
-		accumError = -20000.0;
+		this->stepGeneratorDirection = CCW;
+
+		temp = (uint32_t)((STEPGENERATORFREQUENCY/-uSat) + 0.5);
+		cli();
+		pointer->stepDelay = temp;
+		sei();
 	}
+	else if(uSat > 0.0)
+	{
+		this->stepGeneratorDirection = CW;
+		cli();
+		pointer->stepDelay = 20000;
+		sei();
+	}
+	else if(uSat < 0.0)
+	{
+		this->stepGeneratorDirection = CCW;
 
-	output = this->pTerm*error;	
-
-	output += accumError;
-
-	output *= this->stepsPerSecondToRPM;
-	output += this->currentPidSpeed;
-	this->driver.setVelocity(output);
+		cli();
+		pointer->stepDelay = 20000;
+		sei();
+	}
+	else
+	{
+		this->stepGeneratorDirection = this->direction;
+		cli();
+		pointer->stepDelay = 20000;
+		sei();
+	}
 }
 
-bool uStepperSLite::detectStall(float diff, bool running)
+void uStepperSLite::disablePid(void)
 {
-	static uint8_t checks = 0;
+	this->pidDisabled = 1;
+}
 
+void uStepperSLite::enablePid(void)
+{
+	cli();
+		this->pidDisabled = 0;
+		this->pidTargetPosition = this->encoder.angleMoved * this->stepConversion;
+		this->targetPosition = this->pidTargetPosition;
+		this->state = STOP;
+		this->pidError = 0;
+	sei();
+}
 
+float uStepperSLite::getPidError(void)
+{
+	return this->currentPidError;
+}
 
-	if(running)
+void uStepperSLite::pidDropin(float error)
+{
+	float u;
+	float limit = abs(this->currentPidSpeed) + 6000.0;
+	static float integral;
+	static bool integralReset = 0;
+
+	PORTD &= ~(1 << 4);
+
+	this->currentPidError = error;
+
+	u = error*this->pTerm;
+
+	if(u > 0.0)
 	{
-		if(this->getCurrentDirection() == CW)
+		if(u > limit)
 		{
-			if(this->encoder.curSpeed < this->currentPidSpeed * 0.5)
-			{
-				checks++;
-				if(checks >= 10)
-				{
-					checks = 10;
-					this->stall = 1;
-				}
-			}
-			else
-			{
-				checks = 0;
-				this->stall = 0;
-			}
+			u = limit;
 		}
-		else if(this->getCurrentDirection() == CCW)
+	}
+	else if(u < 0.0)
+	{
+		if(u < -limit)
 		{
-			if(this->encoder.curSpeed > this->currentPidSpeed * 0.5)
-			{
-				checks++;
-				if(checks >= 10)
-				{
-					checks = 10;
-					this->stall = 1;
-				}
-			}
-			else
-			{
-				checks = 0;
-				this->stall = 0;
-			}
+			u = -limit;
 		}
-		
+	}
+
+	integral += error*this->iTerm;
+
+	if(integral > 10000.0)
+	{
+		integral = 10000.0;
+	}
+	else if(integral < -10000.0)
+	{
+		integral = -10000.0;
+	}
+
+	if(error > -10 && error < 10)
+	{
+		if(!integralReset)
+		{
+			integralReset = 1;
+			integral = 0;
+		}
+	}
+	else
+	{
+		integralReset = 0;
+	}
+
+	u += integral;
+	u *= this->stepsPerSecondToRPM;
+
+	this->driver.setVelocity(u);
+}
+
+bool uStepperSLite::detectStall()
+{
+	static float oldTargetPosition;
+	static float oldEncoderPosition;
+	static float encoderPositionChange;
+	static float targetPositionChange;
+	float encoderPosition = ((float)this->encoder.angleMoved*this->stepConversion);
+	static float internalStall = 0.0;
+
+	encoderPositionChange *= 0.99;
+	encoderPositionChange += 0.01*(oldEncoderPosition - encoderPosition);
+	oldEncoderPosition = encoderPosition;
+
+	targetPositionChange *= 0.99;
+	targetPositionChange += 0.01*(oldTargetPosition - this->pidTargetPosition);
+	oldTargetPosition = this->pidTargetPosition;
+
+	if(abs(encoderPositionChange) < abs(targetPositionChange)*0.5)
+	{
+		internalStall *= 0.992;
+		internalStall += 0.008;
+	}
+	else
+	{
+		internalStall *= 0.992;
+	}
+	this->currentPidError = internalStall;
+	if(internalStall >= 0.95)		//3 timeconstants
+	{
+		this->stall = 1;
 	}
 	else
 	{
 		this->stall = 0;
-		checks = 0;
 	}
-	return 0;
 }
 
 bool uStepperSLite::isStalled(void)

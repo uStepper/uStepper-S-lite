@@ -203,6 +203,21 @@
 #error !!This library only supports the ATmega328pb MCU!!
 #endif
 
+#define SDA SDA0
+#define SCL SCL0
+#define TWSTO TWSTO0
+#define TWDR TWDR0
+#define TWSTA TWSTA0
+#define TWINT TWINT0
+#define TWEA TWEA0
+#define TWEN TWEN0
+#define TWCR TWCR0
+#define TWIE TWIE0
+#define TWSR TWSR0
+#define TWPS0 TWPS00
+#define TWPS1 TWPS01
+#define TWBR TWBR0
+
 #include <inttypes.h>
 #include <avr/io.h>
 #include <util/delay.h>
@@ -211,6 +226,7 @@
 #include "TMC2208.h"
 #include "i2cMaster.h"
 
+#define STEPGENERATORFREQUENCY 100000.0
 /** Full step definition*/
 #define FULL 1							
 /** Half step definition*/
@@ -250,14 +266,15 @@
 #define SOFT 0							
 /** Value to convert angle moved between samples to RPM. */
 #define DELTAANGLETORPM ENCODERINTFREQ*(60.0/4095.0)
+#define DELTAANGLETOSTEPSPERSECOND ENCODERINTFREQ*(3200.0/4095.0)
 /** Value to put in hold variable in order for the motor to block when it is not running */
 #define BRAKEON 1
 /** Value to put in hold variable in order for the motor to \b not block when it is not running */
 #define BRAKEOFF 0
 /** Frequency at which the encoder is sampled, for keeping track of angle moved and current speed */
-#define ENCODERINTFREQ 1000.0	
+#define ENCODERINTFREQ 500.0	
 /** Encoder Sample period, for keeping track of angle moved and current speed */	
-#define ENCODERINTSAMPLETIME 1.0/1000.0		
+#define ENCODERINTSAMPLETIME 1.0/ENCODERINTFREQ	
 /** I2C address of the encoder chip */
 #define ENCODERADDR 0x36				
 /** Address of the register, in the encoder chip, containing the 8 least significant bits of the stepper shaft angle */
@@ -271,8 +288,10 @@
 /**	P term in the PI filter estimating the step rate of incomming pulsetrain in DROPIN mode*/
 #define PULSEFILTERKP 60.0
 /**	I term in the PI filter estimating the step rate of incomming pulsetrain in DROPIN mode*/
-#define PULSEFILTERKI 1500.0*ENCODERINTSAMPLETIME
+#define PULSEFILTERKI 500.0*ENCODERINTSAMPLETIME
 
+#define SPS 0
+#define RPM 1
 /**
  * @brief      Used by dropin feature to take in step pulses
  *
@@ -297,6 +316,13 @@ extern "C" void interrupt1(void);
  */
 extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 
+extern "C" void TIMER3_COMPA_vect(void) __attribute__ ((signal,used,naked));
+
+extern "C" void PCINT2_vect(void) __attribute__ ((signal,used));
+
+extern "C" void INT0_vect(void) __attribute__ ((signal,used));
+extern "C" void INT1_vect(void) __attribute__ ((signal,used));
+
 /**
  * @brief      Prototype of class for the AS5600 encoder
  *
@@ -306,13 +332,10 @@ extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
  *             needed by the programmers specific application.
  */
 
+
 class uStepperEncoder
 {
 public:
-	/** Variable used to store the raw angle moved from the
-	* reference position - This variable is not currently used, but might be later on */
-	volatile int32_t angleMovedRaw;
-
 	/** Variable used to store the angle moved from the
 	* reference position */
 	volatile int32_t angleMoved;	
@@ -364,7 +387,7 @@ public:
 	 *
 	 * @return     Current speed in revolutions per minute (RPM)
 	 */
-	float getSpeed(void);
+	float getSpeed(bool unit = SPS);
 	
 	/**
 	 * @brief      Measure the strength of the magnet
@@ -415,24 +438,6 @@ public:
 	 * @return     The angle moved.
 	 */
 	float getAngleMoved(void);
-
-	/**
-	 * @brief      Measure the angle moved from reference position (unfiltered)
-	 *
-	 *             This function measures the angle moved from the shaft
-	 *             reference position. When the uStepper is first powered on,
-	 *             the reference position is reset to the current shaft
-	 *             position, meaning that this function will return the angle
-	 *             rotated with respect to the angle the motor initially had. It
-	 *             should be noted that this function is absolute to an
-	 *             arbitrary number of revolutions !
-	 *
-	 *             The reference position can be reset at any point in time, by
-	 *             use of the setHome() function.
-	 *
-	 * @return     The angle moved (unfiltered).
-	 */
-	float getAngleMovedRaw(void);
 	
 	/**
 	 * @brief      Setup the encoder
@@ -464,35 +469,39 @@ private:
 
 class uStepperSLite
 {
-private:
-	/** This variable is used by the stepper algorithm to keep track of
-	 * which part of the acceleration profile the motor is currently
-	 * operating at. */
-	uint8_t state;		
-
-	/** This variable tells the algorithm whether the motor should
-	 * rotated continuous or only a limited number of steps. If set to
-	 * 1, the motor will rotate continous. */
-	bool continous;					
-
-	/** This variable tells the algorithm the direction of rotation for
-	 * the commanded move. */
-	bool direction;					
+public:
 	
 	/**This variable contains an open-loop number of steps moved from
 	 * the position the motor had when powered on (or reset). a negative
 	 * value represents a rotation in the counter clock wise direction
 	 * and a positive value corresponds to a rotation in the clock wise
 	 * direction. */
-	volatile int32_t stepsSinceReset;
+	volatile int32_t stepsSinceReset;		//OFFSET 0
+	volatile uint32_t cntSinceLastStep;		//offset 4
+	volatile uint32_t stepDelay;			//offset 8
+	/** This variable tells the algorithm the direction of rotation for
+	 * the commanded move. */
+	volatile uint8_t stepGeneratorDirection;							//offset 12
+	volatile int32_t decelToStopThreshold;	//offset 13
 
+	/** This variable tells the algorithm whether the motor should
+	 * rotated continuous or only a limited number of steps. If set to
+	 * 1, the motor will rotate continous. */
+	bool continous;							//offset 17
+	volatile uint8_t pidError = 0;							//offset 18
+
+		/** This variable is used by the stepper algorithm to keep track of
+	 * which part of the acceleration profile the motor is currently
+	 * operating at. */
+	volatile uint8_t state;	
+	/** This variable is used to indicate which mode the uStepper is
+	* running in (Normal, dropin or pid)*/
+	uint8_t mode;
 	/** This variable contains the number of steps commanded by
 	* external controller, in case of dropin feature */
 	volatile int32_t stepCnt;						
-
-	/** This variable is used to indicate which mode the uStepper is
-	* running in (Normal, dropin or pid)*/
-	uint8_t mode;			
+	volatile uint8_t direction;
+				
 
 	/** This variable contains the maximum velocity, the motor is
 	 * allowed to reach at any given point. The user of the library can
@@ -533,23 +542,27 @@ private:
 	/** This variable holds information on wether the motor is stalled or not.
 	0 = OK, 1 = stalled */
 	volatile bool stall;
-
+	volatile float RPMToStepDelay;
 	volatile int32_t decelToAccelThreshold;
 	volatile int32_t accelToCruiseThreshold;
 	volatile int32_t cruiseToDecelThreshold;
-	volatile int32_t decelToStopThreshold;
 
 	volatile float currentPidSpeed;
 	volatile float dropinPulseRate;
 	volatile float currentPidAcceleration;
 	volatile float pidStepsSinceReset;
+	volatile int32_t indexPulses = 0;
 	volatile int32_t targetPosition;
+	
 	volatile bool pidDisabled;
 	bool brake;
+	volatile uint8_t indexPulseSize;
 	friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
+	friend void TIMER3_COMPA_vect(void) __attribute__ ((signal,used,naked));
+	friend void PCINT2_vect(void) __attribute__ ((signal,used));
 	friend void interrupt0(void);
+	friend void INT0_vect(void) __attribute__ ((signal,used));
 	friend void uStepperEncoder::setHome(void);	
-
 
 
 	/**
@@ -577,11 +590,17 @@ private:
 	 * @brief      This method handles the actual PID controller calculations,
 	 *             if enabled.
 	 */
-	void pid(int16_t deltaAngle);
-
-	void checkConnectorOrientation(void);
-
-public:			
+	void pid(float error);
+	/**
+	 * @brief      This method handles the actual PID controller calculations,
+	 *             if enabled.
+	 */
+	void pidDropin(float error);
+	void checkConnectorOrientation(uint8_t mode);
+	float getPidError(void);
+	volatile float currentPidError;
+//public:			
+	volatile float pidTargetPosition;
 	/** Instantiate object for the encoder */
 	uStepperEncoder encoder;		
 
@@ -662,7 +681,7 @@ public:
 	 * @param      holdMode  -	can be set to "HARD" for brake mode or "SOFT" for
 	 *                       freewheel mode (without the quotes).
 	 */
-	void moveSteps(int32_t steps, bool dir, bool holdMode);
+	void moveSteps(int32_t steps, bool dir, bool holdMode = BRAKEON);
 	
 
 	/**
@@ -861,7 +880,7 @@ public:
 	 *              freewheel mode (without the quotes).
 	 */
 
-	void moveToAngle(float angle, bool holdMode);
+	void moveToAngle(float angle, bool holdMode = BRAKEON);
 
 	/**
 	 * @brief      	Moves the motor to a relative angle
@@ -872,7 +891,7 @@ public:
 	 * @param[in]  	holdMode can be set to "HARD" for brake mode or "SOFT" for
 	 *              freewheel mode (without the quotes).
 	 */
-	void moveAngle(float angle, bool holdMode);
+	void moveAngle(float angle, bool holdMode = BRAKEON);
 
 	/**
 	 * @brief      	This method returns a bool variable indicating wether the motor
@@ -882,7 +901,11 @@ public:
 	 */
 	bool isStalled(void);
 
-	bool detectStall(float diff, bool running);
+	bool detectStall();
+
+	void disablePid(void);
+
+	void enablePid(void);
 };
 
 /** Global definition of I2C object for use in arduino sketch */
