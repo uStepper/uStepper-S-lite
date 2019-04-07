@@ -607,6 +607,8 @@ public:
 	/** Instantiate object for the Stepper Driver */
 	Tmc2208 driver;
 
+	bool invertPidDropinDirection;
+
 	/**
 	 * @brief      Constructor of uStepper class
 	 *
@@ -906,6 +908,16 @@ public:
 	void disablePid(void);
 
 	void enablePid(void);
+
+	void setProportional(float P);
+
+	void setIntegral(float I);
+
+	void setDifferential(float D);
+	void invertDropinDir(bool invert);
+	void dropinCli();
+	void parseCommand(String *cmd);
+	void dropinPrintHelp();
 };
 
 /** Global definition of I2C object for use in arduino sketch */

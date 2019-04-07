@@ -13,14 +13,14 @@
 */
 
 #include <uStepperSLite.h>
-
 uStepperSLite stepper;
 
 void setup(void)
 {
-	stepper.setup(DROPIN,3200.0,0.25,0.75,0.0,true);
+	stepper.setup(DROPIN,3200.0,50,1,0.0,true);
 }
 
-void loop(void)
-{
+void loop() {
+  // put your main code here, to run repeatedly:
+  stepper.dropinCli();
 }

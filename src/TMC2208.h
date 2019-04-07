@@ -281,8 +281,9 @@ class Tmc2208
 		void setRunCurrent(uint8_t runPercent);
 		void setVelocity(float RPM);
 		void invertDirection(bool normal = INVERSEDIRECTION);
-
-	private:
+		uint8_t runCurrent;
+		uint8_t holdCurrent;
+	protected:
 		void writeRegister(uint8_t address, int32_t value);
 		void readRegister(uint8_t address, int32_t *value);
 		uint8_t calcCRC(uint8_t datagram[], uint8_t len);
@@ -290,8 +291,7 @@ class Tmc2208
 		void uartSendByte(uint8_t value);
 		bool uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)));
 
-		uint8_t runCurrent;
-		uint8_t holdCurrent;
+		
 };
 
 #endif

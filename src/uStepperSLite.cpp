@@ -97,13 +97,29 @@ void INT0_vect(void)
 	}
 	if((PINB & (0x08)))			//CCW
 	{
-		pointer->stepCnt--;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
+		if(!pointer->invertPidDropinDirection)
+		{
+			pointer->stepCnt--;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
+		}
+		else
+		{
+			pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)
+		}
+		
 	}
 	else						//CW
 	{
-		pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)
+		if(!pointer->invertPidDropinDirection)
+		{
+			pointer->stepCnt++;			//DIR is set to CW, therefore we add 1 step to step count (positive values = number of steps in CW direction from initial postion)
+		}
+		else
+		{
+			pointer->stepCnt--;				//DIR is set to CCW, therefore we subtract 1 step from step count (negative values = number of steps in CCW direction from initial postion)
+		}
 	}
 }
+
 void INT1_vect(void)
 {
 	if(PIND & 0x04)
@@ -1040,6 +1056,8 @@ void uStepperSLite::setup(	uint8_t mode,
 	    this->pTerm = pTerm;
 		this->iTerm = iTerm * ENCODERINTSAMPLETIME;
 	    this->dTerm = dTerm * ENCODERINTFREQ;
+	    Serial.begin(9600);
+  		this->dropinPrintHelp();
 	}
 	this->pidDisabled = 0;
 	TCNT3 = 0;
@@ -1449,4 +1467,423 @@ bool uStepperSLite::detectStall()
 bool uStepperSLite::isStalled(void)
 {
 	return this->stall;
+}
+
+void uStepperSLite::setProportional(float P)
+{
+	this->pTerm = P;
+}
+
+void uStepperSLite::setIntegral(float I)
+{
+	this->iTerm = I * ENCODERINTSAMPLETIME; 
+}
+
+void uStepperSLite::setDifferential(float D)
+{
+	this->dTerm = D * ENCODERINTFREQ;
+}
+
+void uStepperSLite::invertDropinDir(bool invert)
+{
+	this->invertPidDropinDirection = invert;
+}
+
+void uStepperSLite::parseCommand(String *cmd)
+{
+  uint8_t i = 0;
+  String value;
+
+  if(cmd->charAt(2) == ';')
+  {
+    Serial.println("COMMAND NOT ACCEPTED");
+    return;
+  }
+
+  value.remove(0);
+  /****************** SET P Parameter ***************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  if(cmd->substring(0,2) == String("P="))
+  {
+    for(i = 2;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == '.')
+      {
+        value.concat(cmd->charAt(i));
+        i++;
+        break;
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        break;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+    
+    for(;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        Serial.print("COMMAND ACCEPTED. P = ");
+        Serial.println(value.toFloat(),4);
+        this->setProportional(value.toFloat());
+        return;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+  }
+
+/****************** SET I Parameter ***************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,2) == String("I="))
+  {
+    for(i = 2;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == '.')
+      {
+        value.concat(cmd->charAt(i));
+        i++;
+        break;
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        break;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+    
+    for(;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        Serial.print("COMMAND ACCEPTED. I = ");
+        Serial.println(value.toFloat(),4);
+        this->setIntegral(value.toFloat());
+        return;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+  }
+
+/****************** SET D Parameter ***************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,2) == String("D="))
+  {
+    for(i = 2;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == '.')
+      {
+        value.concat(cmd->charAt(i));
+        i++;
+        break;
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        break;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+    
+    for(;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        Serial.print("COMMAND ACCEPTED. D = ");
+        Serial.println(value.toFloat(),4);
+        this->setDifferential(value.toFloat());
+        return;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+  }
+
+/****************** invert Direction ***************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,6) == String("invert"))
+  {
+      if(cmd->charAt(6) != ';')
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+      if(this->invertPidDropinDirection)
+      {
+      	Serial.println(F("Direction normal!"));
+        this->invertDropinDir(0);
+        return;
+      }
+      else
+      {
+      	Serial.println(F("Direction inverted!"));
+        this->invertDropinDir(1);
+        return;
+      }
+  }
+
+  /****************** get Current Pid Error ********************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,5) == String("error"))
+  {
+      if(cmd->charAt(5) != ';')
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+      Serial.print(F("Current Error: "));
+      Serial.print(this->getPidError());
+      Serial.println(F(" Steps"));
+  }
+
+  /****************** Get run/hold current settings ************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,7) == String("current"))
+  {
+      if(cmd->charAt(7) != ';')
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+      Serial.print(F("Run Current: "));
+      Serial.print(((float)this->driver.runCurrent)/0.31);
+      Serial.println(F(" %"));
+      Serial.print(F("Hold Current: "));
+      Serial.print(((float)this->driver.holdCurrent)/0.31);
+      Serial.println(F(" %"));
+  }
+  
+/****************** SET run current ***************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,11) == String("runCurrent="))
+  {
+    for(i = 11;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == '.')
+      {
+        value.concat(cmd->charAt(i));
+        i++;
+        break;
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        break;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+    
+    for(;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+      	if(value.toFloat() >= 0.0 && value.toFloat() <= 100.0)
+      	{
+      		i = (uint8_t)value.toFloat();
+    		break;	
+      	}
+      	else
+      	{
+      		Serial.println("COMMAND NOT ACCEPTED");
+        	return;
+      	}
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+
+    Serial.print("COMMAND ACCEPTED. runCurrent = ");
+    Serial.print(i);
+    Serial.println(F(" %"));
+    this->driver.setRunCurrent(i);
+  }
+
+  /****************** SET run current ***************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,12) == String("holdCurrent="))
+  {
+    for(i = 12;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == '.')
+      {
+        value.concat(cmd->charAt(i));
+        i++;
+        break;
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+        break;
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+    
+    for(;;i++)
+    {
+      if(cmd->charAt(i) >= '0' && cmd->charAt(i) <= '9')
+      {
+        value.concat(cmd->charAt(i));
+      }
+      else if(cmd->charAt(i) == ';')
+      {
+      	if(value.toFloat() >= 0.0 && value.toFloat() <= 100.0)
+      	{
+      		i = (uint8_t)value.toFloat();
+    		break;	
+      	}
+      	else
+      	{
+      		Serial.println("COMMAND NOT ACCEPTED");
+        	return;
+      	}
+      }
+      else
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+    }
+
+    Serial.print("COMMAND ACCEPTED. holdCurrent = ");
+    Serial.print(i);
+    Serial.println(F(" %"));
+    this->driver.setHoldCurrent(i);
+  }
+
+  /****************** DEFAULT (Reject!) ************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else
+  {
+    Serial.println("COMMAND NOT ACCEPTED");
+    return;
+  }
+  
+}
+
+void uStepperSLite::dropinCli()
+{
+	static String stringInput;
+	static uint32_t t = millis();
+
+	while(1)
+	{
+		while(!Serial.available())
+		{
+			delay(1);
+			if((millis() - t) >= 500)
+			{
+				stringInput.remove(0);
+				t = millis();
+			}
+		}
+		t = millis();
+		stringInput += (char)Serial.read();
+		if(stringInput.lastIndexOf(';') > -1)
+		{
+		  this->parseCommand(&stringInput);
+		  stringInput.remove(0);
+		}
+	}
+}
+
+void uStepperSLite::dropinPrintHelp()
+{
+	Serial.println(F("uStepper S-lite Dropin !"));
+	Serial.println(F(""));
+	Serial.println(F("Usage:"));
+	Serial.println(F("Set Proportional constant: 'P=10.002;'"));
+	Serial.println(F("Set Integral constant: 'I=10.002;'"));
+	Serial.println(F("Set Differential constant: 'D=10.002;'"));
+	Serial.println(F("Invert Direction: 'invert;'"));
+	Serial.println(F("Get Current PID Error: 'error;'"));
+	Serial.println(F("Get Run/Hold Current Settings: 'current;'"));
+	Serial.println(F("Set Run Current (percent): 'runCurrent=50.0;'"));
+	Serial.println(F("Set Hold Current (percent): 'holdCurrent=50.0;'"));
+	Serial.println(F(""));
+	Serial.println(F(""));
 }
