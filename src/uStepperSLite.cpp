@@ -5,19 +5,19 @@
 *      	Author: 	Thomas Hørring Olsen                                   					*
 *                                                   										*	
 *********************************************************************************************
-*			            uStepper class 					   									*
+*			            uStepperSLite class 					   									*
 * 																							*
 *	This file contains the implementation of the class methods, incorporated in the  		*
-*	uStepper arduino library. The library is used by instantiating an uStepper object 		*
+*	uStepperSLite arduino library. The library is used by instantiating an uStepperSLite object 		*
 *	by calling either of the two overloaded constructors: 									*
 *																							*
 *		example:																			*
 *																							*
-*		uStepper stepper; 																	*
+*		uStepperSLite stepper; 																	*
 *																							*
 *		OR 																					*
 *																							*
-*		uStepper stepper(500, 2000);														*
+*		uStepperSLite stepper(500, 2000);														*
 *																							*
 *	The first instantiation above creates a uStepper object with default acceleration 		*
 *	and maximum speed (1000 steps/s^2 and 1000steps/s respectively).						*
@@ -1111,7 +1111,7 @@ void uStepperSLite::setHoldCurrent(uint8_t holdCurrent)
 
 void uStepperSLite::setRunCurrent(uint8_t runCurrent)
 {
-	this->driver.setHoldCurrent(runCurrent);
+	this->driver.setRunCurrent(runCurrent);
 }
 
 //Skal Gennemgås !
@@ -1427,7 +1427,7 @@ void uStepperSLite::pidDropin(float error)
 	this->driver.setVelocity(u);
 }
 
-bool uStepperSLite::detectStall()
+bool uStepperSLite::detectStall()//MAKE INTERNALSTALL A VARIABLE FOR SENSITIVITY!
 {
 	static float oldTargetPosition;
 	static float oldEncoderPosition;

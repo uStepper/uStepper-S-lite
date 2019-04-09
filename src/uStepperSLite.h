@@ -1,11 +1,11 @@
 /********************************************************************************************
 * 	 	File: 		uStepper.h 																*
-*		Version:    1.3.0                                           						*
-*      	date: 		January 10th, 2018 	                                    				*
+*		Version:    1.0.0                                           						*
+*      	date: 		April 4th, 2019 	                                    				*
 *      	Author: 	Thomas Hørring Olsen                                   					*
 *                                                   										*	
 *********************************************************************************************
-*	(C) 2018																				*
+*	(C) 2019																				*
 *																							*
 *	uStepper ApS																			*
 *	www.ustepper.com 																		*
@@ -21,27 +21,24 @@
 *                                                                                           *
 ********************************************************************************************/
 /**
-*	\mainpage Arduino library for the uStepper Board
+*	\mainpage Arduino library for the uStepper S-lite Board
 *	
-*	This is the uStepper Arduino library, providing software functions for the different features of the uStepper board.
+*	This is the uStepper S-lite Arduino library, providing software functions for the different features of the uStepper S-lite board.
 *	
 *	\par News!
 *	This version of the library adds a new functions to the library:
-*	MoveToEnd()     -   This function makes the motor turn in the specified direction, until an obstacle is detected,
-*                       at which point the motor stops and resets its home position
-*	Changed the "LimitDetection" example to make use of the new moveToEnd() function
 *
 *   Also some adjustments have been made to different functions. See changelog
 *
 *	\par Features
-*	The uStepper library contains the following features:
+*	The uStepper S-lite library contains the following features:
 *	
 *	- Second order acceleration profile, to provide smooth ramping of the speed and to avoid the motor stalling when demanding high speeds.
 *	- Closed loop PID position controller
 *	- Control of RC servo motors
-*	- Temperature measurement of the stepper driver chip by means of a NTC resistor placed beneath the chip.
 *	- Measure the current position of the shaft (absolute, multiple revolutions)
 *	- Measure the current speed of the motor 
+*	- Stall detection for use in e.g. limit detection functionality 
 *	
 *	The library uses both timer one and timer two in order to function properly, meaning that unless the user of this library
 *	can accept the loss of some functionality, these two timers are unavailable and the registers associated with these timers
@@ -57,19 +54,19 @@
 *	the user of this library needs to use the I2C bus, the user should use the functions defined in this library instead of wire library !
 * 
 *	\par Installation
-*	To install the uStepper library into the Arduino IDE, perform the following steps:
+*	To install the uStepper S-lite library into the Arduino IDE, perform the following steps:
 *
 *	- Go to Sketch->Include Libraries->Manage Libraries... in the arduino IDE
-*	- Search for "uStepper", in the top right corner of the "Library Manager" window
-*	- Install uStepper library 
+*	- Search for "uStepper S-lite", in the top right corner of the "Library Manager" window
+*	- Install uStepper S-lite library 
 *	
 *	The library is tested with Arduino IDE 1.8.5
 *	
-*	\warning MAC users should be aware, that OSX does NOT include FTDI VCP drivers, needed to upload sketches to the uStepper, by default. This driver should be 
+*	\warning MAC users should be aware, that OSX does NOT include FTDI VCP drivers, needed to upload sketches to the uStepper S-lite, by default. This driver should be 
 *	downloaded and installed from FTDI's website:
 *	\warning http://www.ftdichip.com/Drivers/VCP.htm
-*	\warning             The uStepper should NOT be connected to the USB port while installing this driver !
-*	\warning This is not a problem for windows/linux users, as these drivers come with the arduino installation.
+*	\warning             The uStepper S-lite should NOT be connected to the USB port while installing this driver !
+*	\warning This is not a problem for windows/linux users, as these drivers come with the arduino installation.???????????????????????????????????????????????
 *
 *	\par Theory
 *
@@ -115,72 +112,10 @@
 *
 *	\author Thomas Hørring Olsen (thomas@ustepper.com)
 *	\par Change Log
-* 	\version 1.3.0:
-*  	- Changed MoveToAngle() function, to support update of angle setpoint in PID mode
-*  	- Changed getMotorState() function, to support update of angle setpoint in PID mode
-*	- Fixed bug in moveAngle() function, where negative inputs had no effect
-*	- Changed the "LimitDetection" example to make use of the new moveToEnd() function
-* 	\version 1.2.3:
-*  	- Added moveAngle() and MoveToAngle() functions
-*  	- Minor adjustments in setup routines
-* 	\version 1.2.2:
-*  	- Adjusted parameters in limitDetection example, and dropin example
-*  	- Added setCurrent() function to the uStepper object, for the user to easily change current setting
-*   - Minor corrections in PID algorithms
-* 	\version 1.2.1:
-*  	- Fixed a bug in the implementation of the standalone PID controller, primarily anti windup
-*  	- Added example to show how limit detection can be implemented without the use of limit switches
-*   - Adjusted encoder.setHome() function to also reset the stepsSinceReset variable
-* 	\version 1.2.0:
-*  	- Adjusted the code related to the PID closed loop position control. Now it actually works as intended!
-*  	- Fixed Bug with encoder.getStrength and encoder.getAgc functions not reading the correct registers in the encoder
-*   - Changed getStepsSinceReset() to return a 32 bit signed integer, instead of a 64 bit signed integer, which is just overkill, and doesn't really play well with arduino
-*   - Changed some minor things in the assembly code to optimise stuff with regards to the PID mode	
-*   - Fixed a bug in the assembly code causing the StepsSinceReset variable to always decrease regardless of the direction of rotation. This resulted in the number of steps moved since reset, always being negative
-*   - Fixed a typo in the documentation of the getCurrentDirection() function, to state the correct return values
-*   - Added several keywords to the library
-*   - Added Example to demonstrate the use of PID closed loop position control 
-*	\version 1.1.0:
-*	- Fixed bug with encoder.setHome() function, where number of revolutions was never reset, resulting in the angle being reset to the number of revolutions times 360 degrees, instead of 0 degrees
-*	- Implemented Timeout in I2C functions. This ensures that the program will not lock up if access to a non-existing I2C address is attempted.  
-*	- Added overloaded function to pwmD8() and pwmD3(), in order to be able to revert the function of these to pins, back to normal IO mode
-*	\version 1.0.0:
-*	- Added PID functionality to drop-in Feature
-*	- Added PID functionality to regular movement functions
-*	- Added support for servo motors
-*	- Added two new examples
-*	\version 0.4.5:
-*	- Changed setup of Timer1 and Timer2, to allow for PWM generation on D3 and D8. See documentation of "pwmD3()" and "pwmD8()" functions in class "uStepper", for instructions.
-*	- Changed setup of external interrupts for dropin feature, to be able to compile with arduino IDE 1.6.10.
-*	- Updated board installation package to version 1.1.0, to be compliant with arduino IDE 1.6.10. Update uStepper board using package manager in Arduino IDE ("Tools->Board->Board Manager", scroll down to the uStepper board and choose update or install).
-*	\version 0.4.4:
-*	- Added the attribute "used" to declarations of interrupt routines. This enables the library to be compiled in Arduino IDE 1.6.10 
-*	- Updated documentation of "uStepper::setup()"
-*	\version 0.4.3:
-*	- Fixed bug where initial deceleration phase (used when changing speed setting or changing direction while motor is moving), would never be entered, causing motor to accelerate
-*	\version 0.4.2:
-*	- Fixed bug with setHome() causing getAngleMoved() to return alternating values (offset by exactly 180 degrees) between resets.
-*	- Fixed bug in runContinous(), where direction of the motor did not get updated if the function was called with the motor standing still.
-*	\version 0.4.1:
-*	- Fixed bug with getAngleMoved() returning alternating values (offset by exactly 180 degrees) between resets.
-*	- Added keywords
-*	- Updated pin connection description for Drop-in example 
-*	\version 0.4.0:
-*	- Added Drop-in feature to replace stepsticks with uStepper for error correction
-*	- Fixed bug in stepper acceleration algorithm, making the motor spin extremely slow at certain accelerations. Also this fix reduced the motor resonance
-*	- Implemented an IIR filter on the speed measurement, to smooth this out a bit.
-*	\version 0.3.0:
-*	- Added support for speed readout
-*	- Added support for measuring the shaft position with respect to a zero reference. (absolute within multiple revolutions)
-*	\version 0.2.0:
-*	- Complete rewrite of the stepper algorithm in assembler
-*	- Changed from fixed point to floating point variables, due to the need for more precision
-*	- Removed the getSpeed() method, as it didn't work, and therefore it would make more sense to remove it
-*	  and re-add it when i get the time to fix it
-*	- Added a few doxygen comments
-*	- Added a new method (getStepsSinceReset()), which returns all steps performed since reset of the uStepper.
-*	  positive values corresponds to steps in clockwise direction, while negative values corresponds to steps
-*	  in counterclockwise direction.	
+* 	\version 1.0.0:
+* 	\version 0.1.1:
+*  	- Updated uStepperServo example
+*  	- Removed timer1 tampering from uStepperServo.cpp
 *	\version 0.1.0:	
 *	- Initial release
 *	
@@ -188,7 +123,7 @@
 
 /**
  * @file uStepper.h
- * @brief      Function prototypes and definitions for the uStepper library
+ * @brief      Function prototypes and definitions for the uStepper S-lite library
  *
  *             This file contains class and function prototypes for the library,
  *             as well as necessary constants and global variables.
@@ -226,6 +161,7 @@
 #include "TMC2208.h"
 #include "i2cMaster.h"
 
+/** Step generator frequency set to 100 kHz?????????????????????????????????*/
 #define STEPGENERATORFREQUENCY 100000.0
 /** Full step definition*/
 #define FULL 1							
@@ -266,6 +202,7 @@
 #define SOFT 0							
 /** Value to convert angle moved between samples to RPM. */
 #define DELTAANGLETORPM ENCODERINTFREQ*(60.0/4095.0)
+/** Value to convert angle moved between samples to steps per second. */
 #define DELTAANGLETOSTEPSPERSECOND ENCODERINTFREQ*(3200.0/4095.0)
 /** Value to put in hold variable in order for the motor to block when it is not running */
 #define BRAKEON 1
@@ -289,8 +226,9 @@
 #define PULSEFILTERKP 60.0
 /**	I term in the PI filter estimating the step rate of incomming pulsetrain in DROPIN mode*/
 #define PULSEFILTERKI 500.0*ENCODERINTSAMPLETIME
-
+/** Value defining return of speed in Steps Per Second */
 #define SPS 0
+/** Value defining return of speed in Revolutions Per Minute */
 #define RPM 1
 /**
  * @brief      Used by dropin feature to take in step pulses
@@ -327,8 +265,8 @@ extern "C" void INT1_vect(void) __attribute__ ((signal,used));
  * @brief      Prototype of class for the AS5600 encoder
  *
  *             This class enables the user of the library to access the AS5600
- *             encoder on the uStepper board. This class can be instantiated as
- *             a standalone object if all the features of the uStepper is not
+ *             encoder on the uStepper S-lite board. This class can be instantiated as
+ *             a standalone object if all the features of the uStepper S-lite is not
  *             needed by the programmers specific application.
  */
 
@@ -351,7 +289,6 @@ public:
 	/** This variable always contain the current rotor angle, relative
 	* to a single revolution */
 	volatile uint16_t angle;			
-		
 
 	/** Variable used to store the current rotational speed of
 	* the motor shaft */
@@ -384,7 +321,8 @@ public:
 	 *             speed is not calculated in this function, it is merely
 	 *             returning a variable. The speed is calculated in the
 	 *             interrupt routine associated with timer1.
-	 *
+	 * @param      unit  - Return unit for speed, set to either "SPS" Steps 
+	 *			   Per Second (default) or "RPM" (without the quotes).
 	 * @return     Current speed in revolutions per minute (RPM)
 	 */
 	float getSpeed(bool unit = SPS);
@@ -392,7 +330,7 @@ public:
 	/**
 	 * @brief      Measure the strength of the magnet
 	 *
-	 *             This function returns the strength of the magnet
+	 *             This function returns the strength of the magnet.
 	 *
 	 * @return     Strength of magnet
 	 */
@@ -425,7 +363,7 @@ public:
 	 * @brief      Measure the angle moved from reference position
 	 *
 	 *             This function measures the angle moved from the shaft
-	 *             reference position. When the uStepper is first powered on,
+	 *             reference position. When the uStepper S-lite is first powered on,
 	 *             the reference position is reset to the current shaft
 	 *             position, meaning that this function will return the angle
 	 *             rotated with respect to the angle the motor initially had. It
@@ -472,11 +410,11 @@ class uStepperSLite
 public:
 	
 	/**This variable contains an open-loop number of steps moved from
-	 * the position the motor had when powered on (or reset). a negative
+	 * the position the motor had when powered on (or reset). A negative
 	 * value represents a rotation in the counter clock wise direction
 	 * and a positive value corresponds to a rotation in the clock wise
 	 * direction. */
-	volatile int32_t stepsSinceReset;		//OFFSET 0
+	volatile int32_t stepsSinceReset;		//offset 0
 	volatile uint32_t cntSinceLastStep;		//offset 4
 	volatile uint32_t stepDelay;			//offset 8
 	/** This variable tells the algorithm the direction of rotation for
@@ -490,12 +428,12 @@ public:
 	bool continous;							//offset 17
 	volatile uint8_t pidError = 0;							//offset 18
 
-		/** This variable is used by the stepper algorithm to keep track of
+	/** This variable is used by the stepper algorithm to keep track of
 	 * which part of the acceleration profile the motor is currently
 	 * operating at. */
 	volatile uint8_t state;	
-	/** This variable is used to indicate which mode the uStepper is
-	* running in (Normal, dropin or pid)*/
+	/** This variable is used to indicate which mode the uStepper S-lite is
+	* running in (Normal, Drop-in or PID)*/
 	uint8_t mode;
 	/** This variable contains the number of steps commanded by
 	* external controller, in case of dropin feature */
@@ -511,7 +449,7 @@ public:
 	/** This variable contains the maximum acceleration to be used. The
 	 * can be set and read by the user of the library using the
 	 * functions setMaxAcceleration() and getMaxAcceleration()
-	 * respectively. Since this library uses a second order acceleration
+	 * respectively. Since this library uses a second order acceleration????????????????????????????????
 	 * curve, the acceleration applied will always be either +/- this
 	 * value (acceleration/deceleration)or zero (cruise). */
 	float acceleration;				
@@ -591,16 +529,25 @@ public:
 	 *             if enabled.
 	 */
 	void pid(float error);
+
 	/**
-	 * @brief      This method handles the actual PID controller calculations,
+	 * @brief      This method handles the actual PID Drop-in controller calculations,
 	 *             if enabled.
 	 */
 	void pidDropin(float error);
+
+	/**
+	 * @brief      This method handles the connector orientation check in order to
+	 *			   automatically compensate the PID for reversed direction
+	 */	
 	void checkConnectorOrientation(uint8_t mode);
+
 	float getPidError(void);
+
 	volatile float currentPidError;
-//public:			
+			
 	volatile float pidTargetPosition;
+
 	/** Instantiate object for the encoder */
 	uStepperEncoder encoder;		
 
@@ -610,13 +557,13 @@ public:
 	bool invertPidDropinDirection;
 
 	/**
-	 * @brief      Constructor of uStepper class
+	 * @brief      Constructor of uStepper S-lite class
 	 *
-	 *             This is the constructor of the uStepper class. This version
+	 *             This is the constructor of the uStepper S-lite class. This version
 	 *             of the constructor takes in two arguments, "accel" and "vel".
 	 *             These two arguments lets the programmer set the maximum
 	 *             acceleration and velocity, respectively, during instantiation
-	 *             of the uStepper object.
+	 *             of the uStepper S-lite object.
 	 *
 	 * @param      accel  - Floating point representation of the maximum
 	 *                    acceleration allowed in steps/s^2.
@@ -736,9 +683,9 @@ public:
 	void stop(bool brake = BRAKEON);
 
 	/**
-	 * @brief      Initializes the different parts of the uStepper object
+	 * @brief      Initializes the different parts of the uStepper S-lite object
 	 *
-	 *             This function initializes the different parts of the uStepper
+	 *             This function initializes the different parts of the uStepper S-lite
 	 *             object, and should be called in the setup() function of the
 	 *             arduino sketch. This function is needed as some things, like
 	 *             the timer can not be setup in the constructor, since arduino
@@ -746,7 +693,7 @@ public:
 	 *             just before entering the setup() function.
 	 *
 	 * @param[in]  mode             Default is normal mode. Pass the constant
-	 *                              "DROPIN" to configure the uStepper to act as
+	 *                              "DROPIN" to configure the uStepper S-lite to act as
 	 *                              dropin compatible to the stepstick. Pass the
 	 *                              constant "PID", to enable PID feature for
 	 *                              regular movement functions, such as
@@ -827,33 +774,30 @@ public:
 	int32_t getStepsSinceReset(void);
 
 	/**
-	 * @brief      Set motor output current
+	 * @brief      Set motor run and hold current
 	 *
-	 *             This function allows the user to change the current setting of the motor
-	 *             driver. In order to utilize this feature, the current jumper should be 
-	 *             placed in the "I-PWM" position on the uStepper board.
+	 *             This function allows the user to change the run and hold current setting of the motor
+	 *             driver.
 	 *
 	 * @param[in]  current Desired current setting in percent (0% - 100%)
 	 */
 	void setCurrent(uint8_t runCurrent, uint8_t holdCurrent = 25);
 
 		/**
-	 * @brief      Set motor output current
+	 * @brief      Set motor run current
 	 *
-	 *             This function allows the user to change the current setting of the motor
-	 *             driver. In order to utilize this feature, the current jumper should be 
-	 *             placed in the "I-PWM" position on the uStepper board.
+	 *             This function allows the user to change the run current setting of the motor
+	 *             driver.
 	 *
 	 * @param[in]  current Desired current setting in percent (0% - 100%)
 	 */
 	void setHoldCurrent(uint8_t holdCurrent);
 
 		/**
-	 * @brief      Set motor output current
+	 * @brief      Set motor hold current
 	 *
-	 *             This function allows the user to change the current setting of the motor
-	 *             driver. In order to utilize this feature, the current jumper should be 
-	 *             placed in the "I-PWM" position on the uStepper board.
+	 *             This function allows the user to change the holding current setting of the motor
+	 *             driver.
 	 *
 	 * @param[in]  current Desired current setting in percent (0% - 100%)
 	 */
