@@ -1115,7 +1115,7 @@ void uStepperSLite::setRunCurrent(uint8_t runCurrent)
 }
 
 //Skal Gennemgås !
-float uStepperSLite::moveToEnd(bool dir)
+float uStepperSLite::moveToEnd(bool dir, float stallSensitivity)
 {
 	uint8_t checks = 0;
   	float pos = 0.0;
@@ -1137,7 +1137,7 @@ float uStepperSLite::moveToEnd(bool dir)
 	_delay_ms(50);
   	this->runContinous(dir);
   	_delay_ms(200);
-	while(!this->isStalled());
+	while(!this->isStalled(stallSensitivity));
 	this->stop(SOFT);//stop motor without brake
 
 	this->moveSteps(20, !dir, SOFT);
@@ -1427,7 +1427,7 @@ void uStepperSLite::pidDropin(float error)
 	this->driver.setVelocity(u);
 }
 
-bool uStepperSLite::detectStall()//MAKE INTERNALSTALL A VARIABLE FOR SENSITIVITY!
+bool uStepperSLite::detectStall(void)
 {
 	static float oldTargetPosition;
 	static float oldEncoderPosition;
@@ -1435,6 +1435,15 @@ bool uStepperSLite::detectStall()//MAKE INTERNALSTALL A VARIABLE FOR SENSITIVITY
 	static float targetPositionChange;
 	float encoderPosition = ((float)this->encoder.angleMoved*this->stepConversion);
 	static float internalStall = 0.0;
+
+  	if(this->stallSensitivity > 1.0)
+  	{
+  		this->stallSensitivity = 1.0;
+  	}
+  	else if(this->stallSensitivity < 0.0)
+  	{
+  		this->stallSensitivity = 0.0;
+  	}
 
 	encoderPositionChange *= 0.99;
 	encoderPositionChange += 0.01*(oldEncoderPosition - encoderPosition);
@@ -1446,12 +1455,12 @@ bool uStepperSLite::detectStall()//MAKE INTERNALSTALL A VARIABLE FOR SENSITIVITY
 
 	if(abs(encoderPositionChange) < abs(targetPositionChange)*0.5)
 	{
-		internalStall *= 0.992;
-		internalStall += 0.008;
+		internalStall *= this->stallSensitivity;
+		internalStall += 1.0-this->stallSensitivity;
 	}
 	else
 	{
-		internalStall *= 0.992;
+		internalStall *= this->stallSensitivity;
 	}
 	this->currentPidError = internalStall;
 	if(internalStall >= 0.95)		//3 timeconstants
@@ -1464,8 +1473,9 @@ bool uStepperSLite::detectStall()//MAKE INTERNALSTALL A VARIABLE FOR SENSITIVITY
 	}
 }
 
-bool uStepperSLite::isStalled(void)
+bool uStepperSLite::isStalled(float stallSensitivity)
 {
+	this->stallSensitivity = stallSensitivity;
 	return this->stall;
 }
 

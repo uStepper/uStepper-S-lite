@@ -471,6 +471,9 @@ public:
 
 	float dTerm;								
 
+	/** This variable contains the sensitivity of the stall function, and is set to a value between 0.0 and 1.0*/
+	float stallSensitivity;
+
 	//address offset: 108
 	/** This variable converts an angle in degrees into a corresponding
 	 * number of steps*/
@@ -814,7 +817,7 @@ public:
 	 *
 	 * @return 		Degrees turned from calling the function, till end was reached
 	 */
-	float moveToEnd(bool dir);
+	float moveToEnd(bool dir, float stallSensitivity = 0.992);
 
 	/**
 	 * @brief      	Moves the motor to an absolute angle
@@ -845,9 +848,7 @@ public:
 	 *
 	 * @return     	0 = not stalled, 1 = stalled
 	 */
-	bool isStalled(void);
-
-	bool detectStall();
+	bool isStalled(float stallSensitivity = 0.992);
 
 	void disablePid(void);
 
@@ -862,6 +863,9 @@ public:
 	void dropinCli();
 	void parseCommand(String *cmd);
 	void dropinPrintHelp();
+
+private:
+	bool detectStall(void);
 };
 
 /** Global definition of I2C object for use in arduino sketch */
