@@ -1436,15 +1436,6 @@ bool uStepperSLite::detectStall(void)
 	float encoderPosition = ((float)this->encoder.angleMoved*this->stepConversion);
 	static float internalStall = 0.0;
 
-  	if(this->stallSensitivity > 1.0)
-  	{
-  		this->stallSensitivity = 1.0;
-  	}
-  	else if(this->stallSensitivity < 0.0)
-  	{
-  		this->stallSensitivity = 0.0;
-  	}
-
 	encoderPositionChange *= 0.99;
 	encoderPositionChange += 0.01*(oldEncoderPosition - encoderPosition);
 	oldEncoderPosition = encoderPosition;
@@ -1476,6 +1467,16 @@ bool uStepperSLite::detectStall(void)
 bool uStepperSLite::isStalled(float stallSensitivity)
 {
 	this->stallSensitivity = stallSensitivity;
+
+  	if(this->stallSensitivity > 1.0)
+  	{
+  		this->stallSensitivity = 1.0;
+  	}
+  	else if(this->stallSensitivity < 0.0)
+  	{
+  		this->stallSensitivity = 0.0;
+  	}
+  	
 	return this->stall;
 }
 
