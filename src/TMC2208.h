@@ -1,3 +1,35 @@
+/********************************************************************************************
+*       File:       TMC2208.h                                                            *
+*       Version:    1.0.0                                                                   *
+*       Date:       April 4th, 2019                                                          *
+*       Author:     Thomas Hørring Olsen                                                    *
+*                                                                                           *   
+*********************************************************************************************
+*   (C) 2019                                                                                *
+*                                                                                           *
+*   uStepper ApS                                                                            *
+*   www.ustepper.com                                                                        *
+*   administration@ustepper.com                                                             *
+*                                                                                           *
+*   The code contained in this file is released under the following open source license:    *
+*                                                                                           *
+*           Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International         *
+*                                                                                           *
+*   The code in this file is provided without warranty of any kind - use at own risk!       *
+*   neither uStepper ApS nor the author, can be held responsible for any damage             *
+*   caused by the use of the code contained in this file !                                  *
+*                                                                                           *
+********************************************************************************************/
+/** @file TMC2208.h
+ * @brief      Function prototypes and definitions for the uStepper TMC2208 driver
+ *             library
+ *
+ *             This file contains class and function prototypes for the library,
+ *             as well as necessary constants and global variables.
+ *
+ * @author     Thomas Hørring Olsen (thomas@ustepper.com)
+ */
+
 #ifndef TMC2208_H_
 #define TMC2208_H_
 

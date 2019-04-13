@@ -1,7 +1,7 @@
 /********************************************************************************************
-* 	 	File: 		uStepper.h 																*
+* 	 	File: 		uStepperSLite.h 														*
 *		Version:    1.0.0                                           						*
-*      	date: 		April 4th, 2019 	                                    				*
+*      	Date: 		April 4th, 2019 	                                    				*
 *      	Author: 	Thomas Hørring Olsen                                   					*
 *                                                   										*	
 *********************************************************************************************
@@ -40,7 +40,7 @@
 *	- Measure the current speed of the motor 
 *	- Stall detection for use in e.g. limit detection functionality 
 *	
-*	The library uses both timer one and timer two in order to function properly, meaning that unless the user of this library
+*	The library uses both timer one and timer three in order to function properly, meaning that unless the user of this library
 *	can accept the loss of some functionality, these two timers are unavailable and the registers associated with these timers
 *	should not be reconfigured.
 *
@@ -48,10 +48,7 @@
 *	angle moved since the board was reset (or a new home position was configured). Also the drop-in features missed step detection and 
 *	correction is done in this timer. 
 *	
-*	Timer two is used to calculate the stepper acceleration algorithm.  
-*	\warning In order to get some features working, it was necessary to write functions to control the I2C hardware in the MCU, since 
-*	the build in wire library of Arduino uses interrupt which doesn't play well when used inside a timer interrupt routine. Therefore if
-*	the user of this library needs to use the I2C bus, the user should use the functions defined in this library instead of wire library !
+*	Timer three is used to calculate the stepper acceleration algorithm.  
 * 
 *	\par Installation
 *	To install the uStepper S-lite library into the Arduino IDE, perform the following steps:
@@ -82,23 +79,23 @@
 *
 *	The algorithm used is NOT designed by me, I ONLY implemented the algorithm! credit is therefore given to the appropriate author: Aryeh Eiderman.	
 *
-*	for those interested, the deriviation of the algorithm used can be found at the following webpage (Which is neither owned nor affiliated with ON Development IVS in any
+*	for those interested, the deriviation of the algorithm used can be found at the following webpage (Which is neither owned nor affiliated with uStepper ApS in any
 *	way): <a rel="license" href="http://hwml.com/LeibRamp.pdf">Real Time Stepper Motor Linear Ramping Just by Addition and Multiplication</a>	
 *
 *	\par Copyright
 *
-*	(C)2016 ON Development IVS	
+*	(C)2019 uStepper ApS	
 *																	
-*	www.on-development.com 																	
+*	www.ustepper.com 																	
 *
-*	administration@on-development.com 														
+*	administration@ustepper.com 														
 *																							
 *	<img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" />																
 *
 *	The code contained in this file is released under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>	
 *																							
 *	The code in this library is provided without warranty of any kind - use at own risk!		
-* 	neither ON Development IVS nor the author, can be held responsible for any damage		
+* 	neither uStepper ApS nor the author, can be held responsible for any damage		
 * 	caused by the use of the code contained in this library ! 	
 *
 *	\par To do list
@@ -113,6 +110,7 @@
 *	\author Thomas Hørring Olsen (thomas@ustepper.com)
 *	\par Change Log
 * 	\version 1.0.0:
+*??????????????????????????????????????
 * 	\version 0.1.1:
 *  	- Updated uStepperServo example
 *  	- Removed timer1 tampering from uStepperServo.cpp
@@ -122,7 +120,7 @@
 */
 
 /**
- * @file uStepper.h
+ * @file uStepperSLite.h
  * @brief      Function prototypes and definitions for the uStepper S-lite library
  *
  *             This file contains class and function prototypes for the library,
@@ -181,7 +179,6 @@
 #define DROPIN 	1						
 /** Value defining PID mode for normal library functions*/
 #define PID 	2						
-
 /** Value to put in state variable in order to indicate that the motor should not be running */
 #define STOP 1							
 /** Value to put in state variable in order to indicate that the motor should be accelerating */
@@ -449,7 +446,7 @@ public:
 	/** This variable contains the maximum acceleration to be used. The
 	 * can be set and read by the user of the library using the
 	 * functions setMaxAcceleration() and getMaxAcceleration()
-	 * respectively. Since this library uses a second order acceleration????????????????????????????????
+	 * respectively. Since this library uses a second order acceleration
 	 * curve, the acceleration applied will always be either +/- this
 	 * value (acceleration/deceleration)or zero (cruise). */
 	float acceleration;				
@@ -462,13 +459,15 @@ public:
 	//address offset: 95
 	/** This variable contains the proportional coefficient used by the
 	* PID */
-	float pTerm;					
+	float pTerm;		
+	/** This variable contains the value for converting steps per second to RPM */			
 	float stepsPerSecondToRPM;
+	/** This variable contains the value for converting RPM to steps per second */	
 	float RPMToStepsPerSecond;
 	//address offset: 99
 	/** This variable contains the integral coefficient used by the PID */
 	float iTerm;		
-
+	/** This variable contains the differential coefficient used by the PID */
 	float dTerm;								
 
 	/** This variable contains the sensitivity of the stall function, and is set to a value between 0.0 and 1.0*/
@@ -545,6 +544,10 @@ public:
 	 */	
 	void checkConnectorOrientation(uint8_t mode);
 
+	/**
+	 * @brief      This method returns the current PID error
+	 * @return     PID error (float)
+	 */	
 	float getPidError(void);
 
 	volatile float currentPidError;
@@ -814,6 +817,8 @@ public:
 	 *				to be at it's limit.
 	 *
 	 * @param[in]  	dir  Direction to search for limit
+	 	 *
+	 * @param[in]  	stallSensitivity  Sensitivity of stall detection (0.0 - 1.0), low is more sensitive
 	 *
 	 * @return 		Degrees turned from calling the function, till end was reached
 	 */
@@ -868,7 +873,7 @@ private:
 	bool detectStall(void);
 };
 
-/** Global definition of I2C object for use in arduino sketch */
+/** Global definition of I2C object for use in Arduino sketch */
 extern i2cMaster I2C;		
 
 #endif
