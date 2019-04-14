@@ -8,7 +8,7 @@ uStepperSLite stepper(MAXACCELERATION, MAXVELOCITY);
 void setup() {
   // put your setup code here, to run once:
   stepper.setup();
-  Serial.begin(115200);
+  Serial.begin(9600);
   stepper.runContinous(CCW);
 }
 

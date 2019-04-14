@@ -15,7 +15,7 @@ void setup() {
   stepper.setCurrent(50.0);//use software current setting
   stepper.setMaxAcceleration(20000);
   stepper.setMaxVelocity(4000);
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
 
 void loop() {

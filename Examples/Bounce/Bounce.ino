@@ -7,7 +7,7 @@ void setup() {
   stepper.setup();
   stepper.setMaxAcceleration(2000);
   stepper.setMaxVelocity(1500);
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
 
 void loop() {
