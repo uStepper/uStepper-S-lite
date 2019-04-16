@@ -205,11 +205,16 @@ void Tmc2208::setRunCurrent(uint8_t runPercent)
 
 	if(runPercent >= 100)
 	{
-		this->runCurrent = 31;
+		this->runCurrent = 32;
 	}
 	else
 	{
-		this->runCurrent = ((uint8_t)(float)runPercent * 0.32) - 1; 
+		this->runCurrent = (uint8_t)((float)runPercent * 0.32); 
+	}
+
+	if(this->runCurrent > 0)
+	{
+		this->runCurrent -= 1;
 	}
 
 	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
@@ -224,11 +229,16 @@ void Tmc2208::setHoldCurrent(uint8_t holdPercent)
 
 	if(holdPercent >= 100)
 	{
-		this->holdCurrent = 31;
+		this->holdCurrent = 32;
 	}
 	else
 	{
-		this->holdCurrent = ((uint8_t)(float)holdPercent * 0.32) - 1; 
+		this->holdCurrent = (uint8_t)((float)holdPercent * 0.32); 
+	}
+
+	if(this->holdCurrent > 0)
+	{
+		this->holdCurrent -= 1;
 	}
 
 	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
