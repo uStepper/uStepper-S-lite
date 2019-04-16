@@ -208,7 +208,7 @@
 	#define TMC2208_OLB_SHIFT                    7 // min.: 0, max.: 1, default: 0
 	#define TMC2208_T120_MASK                    0x0100 // DRV_STATUS // 120°C comparator
 	#define TMC2208_T120_SHIFT                   8 // min.: 0, max.: 1, default: 0
-	#define TMC2208_T143_MASK                    0x0200 // DRV_STATUS // 1430°C comparator
+	#define TMC2208_T143_MASK                    0x0200 // DRV_STATUS // 143°C comparator
 	#define TMC2208_T143_SHIFT                   9 // min.: 0, max.: 1, default: 0
 	#define TMC2208_T150_MASK                    0x0400 // DRV_STATUS // 150°C comparator
 	#define TMC2208_T150_SHIFT                   10 // min.: 0, max.: 1, default: 0
@@ -301,30 +301,119 @@
 	// 2us delay (30 nops @ 62.5ns = 1.875us + C overhead ~ 2us) 500k baud
 	#define UARTCLKDELAY() 	__asm__ volatile ( 	"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" )
 
+/**
+ * @brief      Prototype of class for accessing all features of the TMC2208 in
+ *             a single object.
+ *
+ *             This class enables the user of the library to access the implemented features
+ *             of the TMC2208 driver, by use of a single object.
+ */
 class Tmc2208
 {
-	public:
-		Tmc2208(void);
-		void setup(void);
-		void disableDriver(void);
-		void enableDriver(void);
-		void setCurrent(uint8_t runPercent, uint8_t holdPercent);
-		void setHoldCurrent(uint8_t holdPercent);
-		void setRunCurrent(uint8_t runPercent);
-		void setVelocity(float RPM);
-		void invertDirection(bool normal = INVERSEDIRECTION);
-		float getRunCurrent(void);
-		float getHoldCurrent(void);
-	protected:
-		uint8_t runCurrent;
-		uint8_t holdCurrent;
-		void writeRegister(uint8_t address, int32_t value);
-		void readRegister(uint8_t address, int32_t *value);
-		uint8_t calcCRC(uint8_t datagram[], uint8_t len);
-		void uartInit(void);
-		void uartSendByte(uint8_t value);
-		bool uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)));
+public:
+	/**
+	* @brief      Constructor
+	*
+	*             This is the constructor of the TMC2208 class.
+	*/
+	Tmc2208(void);
 
+	/**
+	* @brief      Initializes the different parts of the TMC2208 object
+	*
+	*             This function initializes the different parts of the TMC2208
+	*             object, and is called in the setup() function of the
+	*             uStepper S-lite object. This function is needed to setup basic registers of the TMC2208.
+	*
+	*/	
+	void setup(void);
+
+	/**
+	* @brief      Disable the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user disable the stepper driver.
+	*
+	*/
+	void disableDriver(void);
+
+	/**
+	* @brief      Enable the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user enable the stepper driver.
+	*
+	*/
+	void enableDriver(void);
+
+	/**
+	* @brief      Change run and hold current settings of the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user manipulate both run and hold current settings.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
+	*			  Calls setCurrent and setHoldCurrent.
+	*
+	* @param      runPercent     -	Run current in percentage of max current i.e. from 0 to 100.
+	* @param      holdPercent    -	Hold current in percentage of max current i.e. from 0 to 100.
+	*
+	*/
+	void setCurrent(uint8_t runPercent, uint8_t holdPercent);
+
+	/**
+	* @brief      Change hold current setting of the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user manipulate hold current.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
+	*
+	* @param      holdPercent    -	Hold current in percentage of max current i.e. from 0 to 100.
+	*
+	*/
+	void setHoldCurrent(uint8_t holdPercent);
+
+	/**
+	* @brief      Change run current setting of the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user manipulate run current.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
+	*
+	* @param      runPercent     -	Run current in percentage of max current i.e. from 0 to 100.
+	*
+	*/	
+	void setRunCurrent(uint8_t runPercent);
+
+	/**
+	* @brief      Set motor velocity in RPM.
+	*
+	*             This function lets the user command a run speed in RPM for open loop speed control.
+	*
+	* @param      RPM     -	Desired speed of the motor in RPM.
+	*
+	*/
+	void setVelocity(float RPM);
+
+	/**
+	* @brief      Invert motor direction.
+	*
+	*             This function lets the user invert the motor direction - i.e. changing CW to CCW and vise versa.
+	*
+	* @param      normal     -	Can be set to either INVERSEDIRECTION or NORMALDIRECTION.
+	*
+	*/	
+	void invertDirection(bool normal = INVERSEDIRECTION);
+
+protected:
+	/** This variable holds the commanded run current
+	*/	
+	uint8_t runCurrent;
+
+	/** This variable holds the commanded hold current
+	*/	
+	uint8_t holdCurrent;
+
+	void writeRegister(uint8_t address, int32_t value);
+	void readRegister(uint8_t address, int32_t *value);
+	uint8_t calcCRC(uint8_t datagram[], uint8_t len);
+	void uartInit(void);
+	void uartSendByte(uint8_t value);
+	bool uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)));
 		
 };
 

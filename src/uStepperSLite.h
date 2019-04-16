@@ -506,15 +506,31 @@ public:
 	volatile int32_t accelToCruiseThreshold;
 	volatile int32_t cruiseToDecelThreshold;
 
+	/** This variable holds the current PID algorithm speed*/	
 	volatile float currentPidSpeed;
+
+	/** This variable holds the current pulse rate from the external controller using uStepper as drop-in*/	
 	volatile float dropinPulseRate;
+
+	/** This variable holds the current PID algorithm acceleration*/	
 	volatile float currentPidAcceleration;
+
+	/** This variable holds the steps done in the PID since last reset*/	
 	volatile float pidStepsSinceReset;
+
+	/** This variable holds ?????????????????*/	
 	volatile int32_t indexPulses = 0;
+
+	/** This variable holds the target position*/	
 	volatile int32_t targetPosition;
 	
+	/** This variable holds the bool telling if the PID is enabled or not*/	
 	volatile bool pidDisabled;
+
+	/** This variable holds the bool telling if the motor should brake or not*/	
 	bool brake;
+
+	/** This variable holds ???????????*/		
 	volatile uint8_t indexPulseSize;
 	friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 	friend void TIMER3_COMPA_vect(void) __attribute__ ((signal,used,naked));
