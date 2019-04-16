@@ -486,7 +486,7 @@ public:
 	float dTerm;								
 
 	/** This variable contains the sensitivity of the stall function, and is set to a value between 0.0 and 1.0*/
-	float stallSensitivity;
+	float stallSensitivity = 0.992;
 
 	//address offset: 108
 	/** This variable converts an angle in degrees into a corresponding

@@ -1453,7 +1453,7 @@ bool uStepperSLite::detectStall(void)
 	{
 		internalStall *= this->stallSensitivity;
 	}
-	this->currentPidError = internalStall;
+	
 	if(internalStall >= 0.95)		//3 timeconstants
 	{
 		this->stall = 1;
@@ -1466,8 +1466,6 @@ bool uStepperSLite::detectStall(void)
 
 bool uStepperSLite::isStalled(float stallSensitivity)
 {
-	this->stallSensitivity = stallSensitivity;
-
   	if(this->stallSensitivity > 1.0)
   	{
   		this->stallSensitivity = 1.0;
@@ -1475,6 +1473,9 @@ bool uStepperSLite::isStalled(float stallSensitivity)
   	else if(this->stallSensitivity < 0.0)
   	{
   		this->stallSensitivity = 0.0;
+  	}
+  	else{
+  		this->stallSensitivity = stallSensitivity;
   	}
   	
 	return this->stall;

@@ -395,6 +395,7 @@ public:
 	*/	
 	void invertDirection(bool normal = INVERSEDIRECTION);
 
+protected:
 	/** This variable holds the commanded run current
 	*/	
 	uint8_t runCurrent;
@@ -402,14 +403,13 @@ public:
 	/** This variable holds the commanded hold current
 	*/	
 	uint8_t holdCurrent;
-protected:
+
 	void writeRegister(uint8_t address, int32_t value);
 	void readRegister(uint8_t address, int32_t *value);
 	uint8_t calcCRC(uint8_t datagram[], uint8_t len);
 	void uartInit(void);
 	void uartSendByte(uint8_t value);
 	bool uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)));
-
 		
 };
 
