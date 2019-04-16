@@ -1,35 +1,35 @@
 /********************************************************************************************
 * 	 	File: 		uStepper.cpp															*
-*		Version:    1.3.0                                           						*
-*      	date: 		January 10th, 2018 	                                    				*
+*		Version:    1.0.0                                           						*
+*      	Date: 		April 4th, 2019 	                                    				*
 *      	Author: 	Thomas Hørring Olsen                                   					*
 *                                                   										*	
 *********************************************************************************************
-*			            uStepperSLite class 					   									*
+*			           			 uStepper S-lite class 					   					*
 * 																							*
 *	This file contains the implementation of the class methods, incorporated in the  		*
-*	uStepperSLite arduino library. The library is used by instantiating an uStepperSLite object 		*
-*	by calling either of the two overloaded constructors: 									*
+*	uStepper S-lite arduino library. The library is used by instantiating an uStepper 		*
+*	S-lite object by calling either of the two overloaded constructors: 					*
 *																							*
 *		example:																			*
 *																							*
-*		uStepperSLite stepper; 																	*
+*		uStepperSLite stepper; 																*
 *																							*
 *		OR 																					*
 *																							*
-*		uStepperSLite stepper(500, 2000);														*
+*		uStepperSLite stepper(500, 2000);													*
 *																							*
-*	The first instantiation above creates a uStepper object with default acceleration 		*
-*	and maximum speed (1000 steps/s^2 and 1000steps/s respectively).						*
+*	The first instantiation above creates a uStepper S-lite object with default 			*
+*	acceleration and maximum speed (1000 steps/s^2 and 1000steps/s respectively).			*
 *	The second instantiation overwrites the default settings of acceleration and 			*
 *	maximum speed (in this case 500 steps/s^2 and 2000 steps/s, respectively);				*
 *																							*
-*	after instantiation of the object, the object setup function should be called within 	*
-*	arduino's setup function:																*
+*	After instantiation of the object, the object setup function should be called within 	*
+*	Arduino's setup function:																*
 *																							*
 *		example:																			*
 *																							*
-*		uStepper stepper;																	*
+*		uStepperSLite stepper;																*
 *																							*
 *		void setup()																		*
 *		{																					*
@@ -61,10 +61,10 @@
 ********************************************************************************************/
 /**
  * @file uStepper.cpp
- * @brief      Class implementations for the uStepper library
+ * @brief      Class implementations for the uStepper S-lite library
  *
  *             This file contains the implementations of the classes defined in
- *             uStepper.h
+ *             uStepperSLite.h
  *
  * @author     Thomas Hørring Olsen (thomas@ustepper.com)
  */

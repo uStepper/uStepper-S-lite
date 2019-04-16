@@ -1,3 +1,41 @@
+/********************************************************************************************
+*       File:       TMC2208.cpp                           		                            *
+*       Version:    1.0.0                                                                   *
+*       Date:       April 4th, 2019                                                         *
+*       Author:     Thomas Hørring Olsen                                                    *
+*                                                                                           *   
+*********************************************************************************************
+*                       TMC2208 class                   		                            *
+*                                                                                           *
+*   This file contains the implementation of the class methods, incorporated in the         *
+*   TMC2208 Arduino library.																*
+*                                                                                           *
+*********************************************************************************************
+*   (C) 2019                                                                                *
+*                                                                                           *
+*   uStepper ApS                                                                            *
+*   www.ustepper.com                                                                        *
+*   administration@ustepper.com                                                             *
+*                                                                                           *
+*   The code contained in this file is released under the following open source license:    *
+*                                                                                           *
+*           Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International         *
+*                                                                                           *
+*   The code in this file is provided without warranty of any kind - use at own risk!       *
+*   neither uStepper ApS nor the author, can be held responsible for any damage             *
+*   caused by the use of the code contained in this file !                                  *
+*                                                                                           *
+********************************************************************************************/
+/** @file TMC2208.cpp
+ * @brief      Function prototypes and definitions for the TMC2208
+ *             library
+ *
+ *             This file contains the implementations of the classes defined in
+ *             TMC2208.h
+ *
+ * @author     Thomas Hørring Olsen (thomas@ustepper.com)
+ */
+
 #include "TMC2208.h"
 
 uint8_t Tmc2208::calcCRC(uint8_t datagram[], uint8_t len) {
