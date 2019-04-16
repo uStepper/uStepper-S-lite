@@ -398,7 +398,8 @@ public:
 	*
 	*/	
 	void invertDirection(bool normal = INVERSEDIRECTION);
-
+	float getRunCurrent(void);
+	float getHoldCurrent(void);
 protected:
 	/** This variable holds the commanded run current
 	*/	
