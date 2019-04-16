@@ -348,6 +348,8 @@ public:
 	* @brief      Change run and hold current settings of the stepper motor driver - TMC2208.
 	*
 	*             This function lets the user manipulate both run and hold current settings.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
+	*			  Calls setCurrent and setHoldCurrent.
 	*
 	* @param      runPercent     -	Run current in percentage of max current i.e. from 0 to 100.
 	* @param      holdPercent    -	Hold current in percentage of max current i.e. from 0 to 100.
@@ -359,6 +361,7 @@ public:
 	* @brief      Change hold current setting of the stepper motor driver - TMC2208.
 	*
 	*             This function lets the user manipulate hold current.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
 	*
 	* @param      holdPercent    -	Hold current in percentage of max current i.e. from 0 to 100.
 	*
@@ -369,6 +372,7 @@ public:
 	* @brief      Change run current setting of the stepper motor driver - TMC2208.
 	*
 	*             This function lets the user manipulate run current.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
 	*
 	* @param      runPercent     -	Run current in percentage of max current i.e. from 0 to 100.
 	*
