@@ -258,3 +258,13 @@ void Tmc2208::setVelocity(float RPM)
 
 	this->writeRegister(TMC2208_VACTUAL, RPM);
 }
+
+float Tmc2208::getRunCurrent(void)
+{
+	return ((float)this->runCurrent)/0.31;
+}
+
+float Tmc2208::getHoldCurrent(void)
+{
+	return ((float)this->holdCurrent)/0.31;
+}

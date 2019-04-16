@@ -313,7 +313,8 @@ class Tmc2208
 		void setRunCurrent(uint8_t runPercent);
 		void setVelocity(float RPM);
 		void invertDirection(bool normal = INVERSEDIRECTION);
-		
+		float getRunCurrent(void);
+		float getHoldCurrent(void);
 	protected:
 		uint8_t runCurrent;
 		uint8_t holdCurrent;

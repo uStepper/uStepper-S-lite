@@ -1716,10 +1716,10 @@ void uStepperSLite::parseCommand(String *cmd)
         return;
       }
       Serial.print(F("Run Current: "));
-      Serial.print(((float)this->driver.runCurrent)/0.31);
+      Serial.print(this->driver.getRunCurrent());
       Serial.println(F(" %"));
       Serial.print(F("Hold Current: "));
-      Serial.print(((float)this->driver.holdCurrent)/0.31);
+      Serial.print(this->driver.getHoldCurrent());
       Serial.println(F(" %"));
   }
   
