@@ -30,7 +30,7 @@ brne _runAlgorithm
 ldd r16,z+_STATE
 ldi r17,1
 cpse r16,r17
-rjmp _runAlgorithm
+rjmp _checkRdy
 rjmp _finish
 
 _runAlgorithm:

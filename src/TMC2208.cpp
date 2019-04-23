@@ -199,23 +199,14 @@ void Tmc2208::setCurrent(uint8_t runPercent, uint8_t holdPercent)
 	this->setHoldCurrent(holdPercent);
 }
 
+
+
 void Tmc2208::setRunCurrent(uint8_t runPercent)
 {
 	int32_t registerSetting = 0;
 
-	if(runPercent >= 100)
-	{
-		this->runCurrent = 32;
-	}
-	else
-	{
-		this->runCurrent = (uint8_t)((float)runPercent * 0.32); 
-	}
-
-	if(this->runCurrent > 0)
-	{
-		this->runCurrent -= 1;
-	}
+	uint8_t temp = (uint8_t)((float)runPercent * 0.31f) ;
+	this->runCurrent = temp > 31 ? 31 : temp ;
 
 	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
 	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
@@ -227,24 +218,13 @@ void Tmc2208::setHoldCurrent(uint8_t holdPercent)
 {
 	int32_t registerSetting = 0;
 
-	if(holdPercent >= 100)
-	{
-		this->holdCurrent = 32;
-	}
-	else
-	{
-		this->holdCurrent = (uint8_t)((float)holdPercent * 0.32); 
-	}
+ 	uint8_t temp = (uint8_t)((float)holdPercent * 0.31f) ;
+ 	this->holdCurrent = temp > 31 ? 31 : temp ;
 
-	if(this->holdCurrent > 0)
-	{
-		this->holdCurrent -= 1;
-	}
+ 	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
+ 	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
 
-	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
-	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
-
-	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
+ 	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
 }
 
 void Tmc2208::setVelocity(float RPM)

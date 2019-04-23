@@ -389,7 +389,7 @@ void TIMER1_COMPA_vect(void)
 				}
 			}
 
-			if(pointer->mode == PID)
+			if(pointer->mode == PID && !pointer->pidDisabled)
 			{
 				tempFloat = (float)pointer->encoder.angleMoved * pointer->stepConversion;
 				pointer->stepsSinceReset = (int32_t)(tempFloat);
