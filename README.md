@@ -47,23 +47,31 @@ To add the uStepper S-lite library do the following:
 - Close Library Manager
 
 ## Documentation
-Currently the documentation of this library is non-existing, but we are working on getting this part up to speed ASAP. For now, the documentation for the original uStepper can be used as a guideline, as these two libraries are much alike in usage:
+The documentation for this library can be found at the following URL:
 
-http://ustepper.com/docs/html/index.html
+http://ustepper.com/docs/ustepperslite/html/index.html
 
 ## Known Bugs
-- Stall detection is currently not functioning properly
+- none
 
 ## Change Log
 
-0.1.0:	
+1.0.0:
 
-- Initial release
+- Fixed dropin and PID
+- Complete rewrite of step generation algorithm, to increase performance and accuracy
+- Added CLI interface to adjust dropin parameters and store to EEPROM
+- Added docs
+- ALOT of bugfixes 
 
 0.1.1:
 
 - Updated uStepperServo example
 - Removed timer1 tampering from uStepperServo.cpp
 - Updated Readme
+
+0.1.0:	
+
+- Initial release
 
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" property="dct:title">uStepper</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="www.ustepper.com" property="cc:attributionName" rel="cc:attributionURL">ON Development</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.

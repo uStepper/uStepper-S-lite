@@ -77,10 +77,10 @@
 	#define TMC2208_PWM_AUTO      0x72
 	///@}
 	
-	/** @name Bit masks / shift patterns	 
-	*	Bit masks and shift patterns for every bit in each register
+	/**
+	* \defgroup Bit masks and shift patterns for every bit in each register
+	* @{
 	*/
-	///@{
 	// Write-Bit
 	#define TMC2208_WRITE_BIT 0x80
 
@@ -242,7 +242,7 @@
 	#define TMC2208_PWM_OFS_AUTO_SHIFT           0 // min.: 0, max.: 255, default: 0
 	#define TMC2208_PWM_GRAD_AUTO_MASK           0xFF0000 // PWM_AUTO // Automatically  determined gradient value
 	#define TMC2208_PWM_GRAD_AUTO_SHIFT          16 // min.: 0, max.: 255, default: 0
-	///@}
+	/**@}*/
 
 	/** Define to calculate size of array*/
 	#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))

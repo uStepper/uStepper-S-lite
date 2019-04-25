@@ -21,14 +21,18 @@
 *                                                                                           *
 ********************************************************************************************/
 /**
+* @file uStepperSLite.h
+*
+* @brief      Function prototypes and definitions for the uStepper S-lite library
+*
+*             This file contains class and function prototypes for the library,
+*             as well as necessary constants and global variables.
+*
+* @author     Thomas Hørring Olsen (thomas@ustepper.com)
+*
 *	\mainpage Arduino library for the uStepper S-lite Board
 *	
 *	This is the uStepper S-lite Arduino library, providing software functions for the different features of the uStepper S-lite board.
-*	
-*	\par News!
-*	This version of the library adds a new functions to the library:
-*
-*   Also some adjustments have been made to different functions. See changelog
 *
 *	\par Features
 *	The uStepper S-lite library contains the following features:
@@ -77,11 +81,6 @@
 *
 *	From the above picture it can be seen how the motor moves with this second order acceleration profile. The postion is depicted as orange, velocity as red and the acceleration as green.	
 *
-*	The algorithm used is NOT designed by me, I ONLY implemented the algorithm! credit is therefore given to the appropriate author: Aryeh Eiderman.	
-*
-*	for those interested, the deriviation of the algorithm used can be found at the following webpage (Which is neither owned nor affiliated with uStepper ApS in any
-*	way): <a rel="license" href="http://hwml.com/LeibRamp.pdf">Real Time Stepper Motor Linear Ramping Just by Addition and Multiplication</a>	
-*
 *	\par Copyright
 *
 *	(C)2019 uStepper ApS	
@@ -101,8 +100,6 @@
 *	\par To do list
 *	- Clean out in unused variables
 *	- Update comments
-*	- Add support for limit switches
-*	- Split the library into multiple files
 *
 *	\par Known Bugs
 *	- No known bugs
@@ -110,7 +107,11 @@
 *	\author Thomas Hørring Olsen (thomas@ustepper.com)
 *	\par Change Log
 * 	\version 1.0.0:
-*??????????????????????????????????????
+*	- Fixed dropin and PID
+*	- Complete rewrite of step generation algorithm, to increase performance and accuracy
+*	- Added CLI interface to adjust dropin parameters and store to EEPROM
+*	- Added docs
+*	- ALOT of bugfixes 
 * 	\version 0.1.1:
 *  	- Updated uStepperServo example
 *  	- Removed timer1 tampering from uStepperServo.cpp
@@ -119,15 +120,6 @@
 *	
 */
 
-/**
- * @file uStepperSLite.h
- * @brief      Function prototypes and definitions for the uStepper S-lite library
- *
- *             This file contains class and function prototypes for the library,
- *             as well as necessary constants and global variables.
- *
- * @author     Thomas Hørring Olsen (thomas@ustepper.com)
- */
 
 #ifndef _USTEPPER_S_LITE_H_
 #define _USTEPPER_S_LITE_H_
@@ -761,7 +753,7 @@ public:
 	 *             used to define whether the motor should brake or freewheel
 	 *             after the function has been called.
 	 *
-	 * @param      holdMode  -	can be set to "HARD" for brake mode or "SOFT" for
+	 * @param      brake  -	can be set to "HARD" for brake mode or "SOFT" for
 	 *                       freewheel mode (without the quotes).
 	 */
 	void stop(bool brake = BRAKEON);
@@ -776,31 +768,31 @@ public:
 	 *             for some strange reason, resets a lot of the AVR registers
 	 *             just before entering the setup() function.
 	 *
-	 * @param[in]  mode             Default is normal mode. Pass the constant
-	 *                              "DROPIN" to configure the uStepper S-lite to act as
-	 *                              dropin compatible to the stepstick. Pass the
-	 *                              constant "PID", to enable PID feature for
-	 *                              regular movement functions, such as
-	 *                              moveSteps()
-	 * @param[in]  step resolution  This parameter should be set to
-	 *                              the steps/revolution which is 16 * steppper steps/revolution.
-	 *								For a 1.8deg stepper this is 16 * 200 = 3200.
-	 *								In Drop-in this number should be set to the microstep setting
-	 *								of the controller (e.g. 16).
-	 * @param[in]  pTerm            The proportional coefficent of the PID
-	 *                              controller
-	 * @param[in]  iTerm            The integral coefficent of the PID
-	 *                              controller
-	 * @param[in]  dterm            The differential coefficent of the PID
-	 *                              controller
-	 * @param[in]  setHome          When set to true, the encoder position is
-	 *								Reset. When set to false, the encoder
-	 *								position is not reset.
-	 * @param[in]  invert           Inverts the motor direction for dropin
-	 *								feature. 0 = NOT invert, 1 = invert.
-	 *								this has no effect for other modes than dropin
-	 * @param[in]  runCurrent       Sets the current (in percent) to use while motor is running.
-	 * @param[in]  holdCurrent      Sets the current (in percent) to use while motor is NOT running
+	 * @param[in]  mode             	Default is normal mode. Pass the constant
+	 *                              	"DROPIN" to configure the uStepper S-lite to act as
+	 *                              	dropin compatible to the stepstick. Pass the
+	 *                              	constant "PID", to enable PID feature for
+	 *                              	regular movement functions, such as
+	 *                              	moveSteps()
+	 * @param[in]  stepsPerRevolution  	This parameter should be set to
+	 *                              	the steps/revolution which is 16 * steppper steps/revolution.
+	 *									For a 1.8deg stepper this is 16 * 200 = 3200.
+	 *									In Drop-in this number should be set to the microstep setting
+	 *									of the controller (e.g. 16).
+	 * @param[in]  pTerm           		The proportional coefficent of the PID
+	 *                              	controller
+	 * @param[in]  iTerm            	The integral coefficent of the PID
+	 *                              	controller
+	 * @param[in]  dTerm            	The differential coefficent of the PID
+	 *                              	controller
+	 * @param[in]  setHome          	When set to true, the encoder position is
+	 *									Reset. When set to false, the encoder
+	 *									position is not reset.
+	 * @param[in]  invert           	Inverts the motor direction for dropin
+	 *									feature. 0 = NOT invert, 1 = invert.
+	 *									this has no effect for other modes than dropin
+	 * @param[in]  runCurrent       	Sets the current (in percent) to use while motor is running.
+	 * @param[in]  holdCurrent      	Sets the current (in percent) to use while motor is NOT running
 	 */
 	void setup(	uint8_t mode = NORMAL, 
 				float stepsPerRevolution = 3200.0, 
@@ -866,27 +858,29 @@ public:
 	 *             This function allows the user to change the run and hold current setting of the motor
 	 *             driver.
 	 *
-	 * @param[in]  current Desired current setting in percent (0% - 100%)
+	 * @param[in]  runCurrent Desired run current setting in percent (0% - 100%)
+	 *
+	 * @param[in]  holdCurrent Desired brake current setting in percent (0% - 100%)
 	 */
 	void setCurrent(uint8_t runCurrent, uint8_t holdCurrent = 25);
 
-		/**
+	/**
+	 * @brief      Set motor hold current
+	 *
+	 *             This function allows the user to change the hold current setting of the motor
+	 *             driver.
+	 *
+	 * @param[in]  holdCurrent Desired brake current setting in percent (0% - 100%)
+	 */
+	void setHoldCurrent(uint8_t holdCurrent);
+
+	/**
 	 * @brief      Set motor run current
 	 *
 	 *             This function allows the user to change the run current setting of the motor
 	 *             driver.
 	 *
-	 * @param[in]  current Desired current setting in percent (0% - 100%)
-	 */
-	void setHoldCurrent(uint8_t holdCurrent);
-
-		/**
-	 * @brief      Set motor hold current
-	 *
-	 *             This function allows the user to change the holding current setting of the motor
-	 *             driver.
-	 *
-	 * @param[in]  current Desired current setting in percent (0% - 100%)
+	 * @param[in]  runCurrent Desired run current setting in percent (0% - 100%)
 	 */
 	void setRunCurrent(uint8_t runCurrent);
 	
@@ -932,7 +926,7 @@ public:
 	 * @brief      	This method returns a bool variable indicating wether the motor
 	 *				is stalled or not
 	 *
-	 * @param[in]  	stallSensitivity  Sensitivity of stall detection (0.0 - 1.0), low is more sensitive
+	 * @param[in]  	stallSensitivity - Sensitivity of stall detection (0.0 - 1.0), low is more sensitive
 	 *
 	 * @return     	0 = not stalled, 1 = stalled
 	 */
@@ -953,7 +947,7 @@ public:
 	/**
 	 * @brief      	This method is used to change the PID proportional parameter P.
 	 *
-	 * @param[in]  	PID proportional part P
+	 * @param[in]  	P - PID proportional part P
 	 *
 	 */
 	void setProportional(float P);
@@ -961,7 +955,7 @@ public:
 	/**
 	 * @brief      	This method is used to change the PID integral parameter I.
 	 *
-	 * @param[in]  	PID integral part I
+	 * @param[in]  	I - PID integral part I
 	 *
 	 */
 	void setIntegral(float I);
@@ -969,7 +963,7 @@ public:
 	/**
 	 * @brief      	This method is used to change the PID differential parameter D.
 	 *
-	 * @param[in]  	PID differential part D
+	 * @param[in]  	D - PID differential part D
 	 *
 	 */
 	void setDifferential(float D);
@@ -977,7 +971,7 @@ public:
 	/**
 	 * @brief      	This method is used to invert the drop-in direction pin interpretation.
 	 *
-	 * @param[in]  	0 = not inverted, 1 = inverted
+	 * @param[in]  	invert - 0 = not inverted, 1 = inverted
 	 *
 	 */
 	void invertDropinDir(bool invert);

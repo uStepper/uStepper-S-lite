@@ -1,5 +1,5 @@
 /********************************************************************************************
-* 	 	File: 		uStepper.cpp															*
+* 	 	File: 		uStepperSLite.cpp															*
 *		Version:    1.0.0                                           						*
 *      	Date: 		April 4th, 2019 	                                    				*
 *      	Author: 	Thomas Hørring Olsen                                   					*
@@ -60,7 +60,7 @@
 *                                                                                           *
 ********************************************************************************************/
 /**
- * @file uStepper.cpp
+ * @file uStepperSLite.cpp
  * @brief      Class implementations for the uStepper S-lite library
  *
  *             This file contains the implementations of the classes defined in
