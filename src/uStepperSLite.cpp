@@ -1060,6 +1060,7 @@ void uStepperSLite::setup(	uint8_t mode = NORMAL,
 			{
 				this->dropinSettings = tempSettings;
 				this->saveDropinSettings();
+				EEPROM.put(sizeof(dropinCliSettings_t),this->dropinSettings.checksum);
 				this->loadDropinSettings();
 			}
 			else
@@ -1068,6 +1069,7 @@ void uStepperSLite::setup(	uint8_t mode = NORMAL,
 				{
 					this->dropinSettings = tempSettings;
 					this->saveDropinSettings();
+					EEPROM.put(sizeof(dropinCliSettings_t),this->dropinSettings.checksum);
 					this->loadDropinSettings();
 				}
 			}
@@ -1579,6 +1581,8 @@ void uStepperSLite::parseCommand(String *cmd)
       {
         Serial.print("COMMAND ACCEPTED. P = ");
         Serial.println(value.toFloat(),4);
+        this->dropinSettings.P.f = value.toFloat();
+    	this->saveDropinSettings();
         this->setProportional(value.toFloat());
         return;
       }
@@ -1629,6 +1633,9 @@ void uStepperSLite::parseCommand(String *cmd)
       {
         Serial.print("COMMAND ACCEPTED. I = ");
         Serial.println(value.toFloat(),4);
+
+        this->dropinSettings.I.f = value.toFloat();
+    	this->saveDropinSettings();
         this->setIntegral(value.toFloat());
         return;
       }
@@ -1679,6 +1686,8 @@ void uStepperSLite::parseCommand(String *cmd)
       {
         Serial.print("COMMAND ACCEPTED. D = ");
         Serial.println(value.toFloat(),4);
+        this->dropinSettings.D.f = value.toFloat();
+    	this->saveDropinSettings();
         this->setDifferential(value.toFloat());
         return;
       }
@@ -1704,12 +1713,16 @@ void uStepperSLite::parseCommand(String *cmd)
       if(this->invertPidDropinDirection)
       {
       	Serial.println(F("Direction normal!"));
+      	this->dropinSettings.invert = 0;
+    	this->saveDropinSettings();
         this->invertDropinDir(0);
         return;
       }
       else
       {
       	Serial.println(F("Direction inverted!"));
+      	this->dropinSettings.invert = 1;
+    	this->saveDropinSettings();
         this->invertDropinDir(1);
         return;
       }
@@ -1843,6 +1856,8 @@ void uStepperSLite::parseCommand(String *cmd)
     Serial.print("COMMAND ACCEPTED. runCurrent = ");
     Serial.print(i);
     Serial.println(F(" %"));
+    this->dropinSettings.runCurrent = i;
+    this->saveDropinSettings();
     this->driver.setRunCurrent(i);
   }
 
@@ -1870,7 +1885,7 @@ void uStepperSLite::parseCommand(String *cmd)
       }
       else
       {
-        Serial.println("COMMAND NOT ACCEPTED");
+        Serial.println(F("COMMAND NOT ACCEPTED"));
         return;
       }
     }
@@ -1890,20 +1905,22 @@ void uStepperSLite::parseCommand(String *cmd)
       	}
       	else
       	{
-      		Serial.println("COMMAND NOT ACCEPTED");
+      		Serial.println(F("COMMAND NOT ACCEPTED"));
         	return;
       	}
       }
       else
       {
-        Serial.println("COMMAND NOT ACCEPTED");
+        Serial.println(F("COMMAND NOT ACCEPTED"));
         return;
       }
     }
 
-    Serial.print("COMMAND ACCEPTED. holdCurrent = ");
+    Serial.print(F("COMMAND ACCEPTED. holdCurrent = "));
     Serial.print(i);
     Serial.println(F(" %"));
+    this->dropinSettings.holdCurrent = i;
+    this->saveDropinSettings();
     this->driver.setHoldCurrent(i);
   }
 
@@ -1913,7 +1930,7 @@ void uStepperSLite::parseCommand(String *cmd)
   **************************************************************/
   else
   {
-    Serial.println("COMMAND NOT ACCEPTED");
+    Serial.println(F("COMMAND NOT ACCEPTED"));
     return;
   }
   
@@ -1976,10 +1993,9 @@ bool uStepperSLite::loadDropinSettings(void)
 	}
 
 	this->dropinSettings = tempSettings;
-
-	this->pTerm = this->dropinSettings.P.f;
-	this->iTerm = this->dropinSettings.I.f;
-	this->dTerm = this->dropinSettings.D.f;
+	this->setProportional(this->dropinSettings.P.f);
+	this->setIntegral(this->dropinSettings.I.f);
+	this->setDifferential(this->dropinSettings.D.f);
 	this->invertDropinDir((bool)this->dropinSettings.invert);
 	this->setCurrent(this->dropinSettings.runCurrent,this->dropinSettings.holdCurrent);	
 	return 1;
@@ -1990,7 +2006,6 @@ void uStepperSLite::saveDropinSettings(void)
 	this->dropinSettings.checksum = this->dropinSettingsCalcChecksum(&this->dropinSettings);
 
 	EEPROM.put(0,this->dropinSettings);
-	EEPROM.put(sizeof(dropinCliSettings_t),this->dropinSettings.checksum);
 }
 
 uint8_t uStepperSLite::dropinSettingsCalcChecksum(dropinCliSettings_t *settings)
