@@ -138,23 +138,39 @@
 
 #include <EEPROM.h>
 
+/**
+ * @brief      Union to easily split a float into its binary representation
+ * 
+ */
 typedef union
 {
-	float f;
-	uint8_t bytes[4];
+	float f;			/**< normal float value*/
+	uint8_t bytes[4];	/**< binary representation, split into an array of 4 bytes*/
 }floatBytes_t;
 
+/**
+ * @brief      	Struct to store dropin settings
+ *
+ *				This struct contains the current dropin settings, aswell as a checksum,
+ *				which is used upon loading of settings from EEPROM, to determine if the 
+ *				settings in the EEPROM are valid.								
+ * 
+ */
 typedef struct 
 {
-	floatBytes_t P;
-	floatBytes_t I;
-	floatBytes_t D;
-	uint8_t invert;
-	uint8_t holdCurrent;
-	uint8_t runCurrent;
-	uint8_t checksum;
+	floatBytes_t P;				/**< Proportional gain of the dropin PID controller	*/
+	floatBytes_t I;				/**< Integral gain of the dropin PID controller	*/			
+	floatBytes_t D;				/**< Differential gain of the dropin PID controller	*/
+	uint8_t invert;				/**< Inversion of the "direction" input in dropin mode. 0 = NOT invert, 1 = invert	*/
+	uint8_t holdCurrent;		/**< Current to use when the motor is NOT rotating. 0-100 %	*/
+	uint8_t runCurrent;			/**< Current to use when the motor is rotating. 0-100 %	*/
+	uint8_t checksum;			/**< Checksum	*/
 }dropinCliSettings_t;
 
+/** @name I2C0 defines
+ *  Defines necessary to use I2C0 
+ */
+///@{
 #define SDA SDA0
 #define SCL SCL0
 #define TWSTO TWSTO0
@@ -169,6 +185,7 @@ typedef struct
 #define TWPS0 TWPS00
 #define TWPS1 TWPS01
 #define TWBR TWBR0
+///@}
 
 #include <inttypes.h>
 #include <avr/io.h>
@@ -246,21 +263,6 @@ typedef struct
 #define SPS 0
 /** Value defining return of speed in Revolutions Per Minute */
 #define RPM 1
-/**
- * @brief      Used by dropin feature to take in step pulses
- *
- *             This interrupt routine is used by the dropin feature to keep
- *             track of step and direction pulses from main controller
- */
-extern "C" void interrupt0(void);
-
-/**
- * @brief      Used by dropin feature to take in enable signal
- *
- *             This interrupt routine is used by the dropin feature to keep
- *             track of enable signal from main controller
- */
-extern "C" void interrupt1(void);
 
 /**
  * @brief      Measures angle and speed of motor.
@@ -276,7 +278,21 @@ extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
  *             This interrupt routine is in charge of acceleration and deceleration.
  */
 extern "C" void TIMER3_COMPA_vect(void) __attribute__ ((signal,used,naked));
+
+/**
+ * @brief      Used by dropin feature to take in step pulses
+ *
+ *             This interrupt routine is used by the dropin feature to keep
+ *             track of step and direction pulses from main controller
+ */
 extern "C" void INT0_vect(void) __attribute__ ((signal,used));
+
+/**
+ * @brief      Used by dropin feature to take in enable signal
+ *
+ *             This interrupt routine is used by the dropin feature to keep
+ *             track of enable signal from main controller
+ */
 extern "C" void INT1_vect(void) __attribute__ ((signal,used));
 
 /**
@@ -433,11 +449,19 @@ public:
 	 * and a positive value corresponds to a rotation in the clock wise
 	 * direction. */
 	volatile int32_t stepsSinceReset;		//offset 0
+	/**	Counter used by the stepgeneration algorithm to check how many
+	*	interrupt ticks has passed since last step was issued
+	*/
 	volatile uint32_t cntSinceLastStep;		//offset 4
+	/**	This variable holds the delay needed between each step pulse,
+	*	in interrupt ticks.	*/
 	volatile uint32_t stepDelay;			//offset 8
 	/** This variable tells the algorithm the direction of rotation for
 	 * the commanded move. */
 	volatile uint8_t stepGeneratorDirection;//offset 12
+	/**	This variable holds the number of steps to issue during the
+	*	deceleration phase.
+	*/
 	volatile int32_t decelToStopThreshold;	//offset 13
 
 	/** This variable tells the algorithm whether the motor should
@@ -461,8 +485,7 @@ public:
 	* external controller, in case of dropin feature */
 	volatile int32_t stepCnt;	
 
-	/** This variable contains the direction commanded by
-	* external controller, in case of dropin feature */					
+	/** This variable contains the direction commanded by the last issued move */					
 	volatile uint8_t direction;		
 
 	/** This variable contains the maximum velocity, the motor is
@@ -512,16 +535,23 @@ public:
 	/** This variable holds information on wether the motor is stalled or not.
 	0 = OK, 1 = stalled */
 	volatile bool stall;
+	
+	/** This variable is used to convert a desired velocity in RPM to the corresponding
+	*	delay between step pulses in interrupt ticks*/
 	volatile float RPMToStepDelay;
+	
+	/**	This Variable holds the number of steps to issue during the initial deceleration phase,
+	*	which is issued if the motor velocity is higher than the desired velocity of a new move*/
 	volatile int32_t decelToAccelThreshold;
+	
+	/**	This Variable holds the number of steps to issue during the acceleration phase*/
 	volatile int32_t accelToCruiseThreshold;
+
+	/**	This Variable holds the number of steps to issue during the cruise phase*/
 	volatile int32_t cruiseToDecelThreshold;
 
 	/** This variable holds the current PID algorithm speed*/	
 	volatile float currentPidSpeed;
-
-	/** This variable holds the current pulse rate from the external controller using uStepper as drop-in*/	
-	volatile float dropinPulseRate;
 
 	/** This variable holds the current PID algorithm acceleration*/	
 	volatile float currentPidAcceleration;
@@ -540,7 +570,6 @@ public:
 
 	friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 	friend void TIMER3_COMPA_vect(void) __attribute__ ((signal,used,naked));
-	friend void interrupt0(void);
 	friend void INT0_vect(void) __attribute__ ((signal,used));
 	friend void uStepperEncoder::setHome(void);	
 
@@ -977,7 +1006,7 @@ public:
 	 *			
 	 */
 	void parseCommand(String *cmd);
-	
+
 	/**
 	 * @brief      	This method is used to print the dropinCli menu explainer:
 	 *				
@@ -1006,10 +1035,36 @@ private:
 	 */
 	bool detectStall(void);
 
+	/**	This variable holds the dropin settings.
+	*	@see dropinCliSettings_t*/
 	dropinCliSettings_t dropinSettings;
 
+	/**
+	 * @brief      	This method loads the dropin settings stored in EEPROM. 
+	 *
+	 *				This method loads the dropin settings stored in EEPROM. If the data stored in EEPROM
+	 *				is valid, the settings are applied. If the data is not valid, the data loaded from
+	 *				EEPROM is discarded, and the default data specifed at compile time are used isntead.
+	 *
+	 * @return     	0 = stored settings NOT valid, 1 = stored settings valid
+	 *			
+	 */
 	bool loadDropinSettings(void);
+
+	/**
+	 * @brief      	This method stores the current dropin settings in EEPROM
+	 *			
+	 */
 	void saveDropinSettings(void);
+
+	/**
+	 * @brief      	This method is used internally for stall detection.
+	 *
+	 * @param[in]	settings - address of the dropin settings object, of which to calculate the checksum
+	 *
+	 * @return     	checksum of dropin settings struct
+	 *			
+	 */
 	uint8_t dropinSettingsCalcChecksum(dropinCliSettings_t *settings);
 };
 

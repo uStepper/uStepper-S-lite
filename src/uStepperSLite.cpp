@@ -1042,10 +1042,6 @@ void uStepperSLite::setup(	uint8_t mode = NORMAL,
 			EICRA = 0x06;
 			EIMSK = 0x03;
 
-			this->pTerm = pTerm;
-			this->iTerm = iTerm;
-		    this->dTerm = dTerm;
-
 			Serial.begin(9600);
 
 			tempSettings.P.f = pTerm;
