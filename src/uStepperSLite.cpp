@@ -75,16 +75,6 @@ volatile int32_t *p __attribute__((used));
 i2cMaster I2C(1);
 extern "C" {
 
-void PCINT2_vect(void)
-{
-	if(pointer->currentPidSpeed > 0){
-	}
-	else{
-	}
-
-	pointer->indexPulses++;
-}
-
 void INT0_vect(void)
 {
 	if(PIND & 0x04)
@@ -986,13 +976,18 @@ void uStepperSLite::checkConnectorOrientation(uint8_t mode)
 	}
 }
 
-void uStepperSLite::setup(	uint8_t mode,
-							float stepsPerRevolution,
-							float pTerm,
-							float iTerm,
-							float dTerm,
-							bool setHome)
+void uStepperSLite::setup(	uint8_t mode = NORMAL, 
+				float stepsPerRevolution = 3200.0, 
+				float pTerm = 0.75, 
+				float iTerm = 3.0, 
+				float dTerm = 0.0,
+				bool setHome = true,
+				uint8_t invert,
+				uint8_t runCurrent,
+				uint8_t holdCurrent)
 {
+	dropinCliSettings_t tempSettings;
+
 	p = &(this->stepsSinceReset);
 	this->pidDisabled = 1;
 	this->mode = mode;
@@ -1030,10 +1025,6 @@ void uStepperSLite::setup(	uint8_t mode,
 	this->stepsPerSecondToRPM = 60.0/stepsPerRevolution;
 	this->RPMToStepsPerSecond = stepsPerRevolution/60.0;
 	this->RPMToStepDelay = STEPGENERATORFREQUENCY/this->RPMToStepsPerSecond;
-	this->indexPulseSize = (uint8_t)(stepsPerRevolution/50.0);
-	this->encoder.setHome();
-
-	this->checkConnectorOrientation(mode);
 	this->encoder.setHome();
 
 	if(this->mode)
@@ -1050,15 +1041,51 @@ void uStepperSLite::setup(	uint8_t mode,
 			digitalWrite(4,HIGH);
 			EICRA = 0x06;
 			EIMSK = 0x03;
-		}
 
-		//Scale supplied controller coefficents. This is done to enable the user to use easier to manage numbers for these coefficients.
-	    this->pTerm = pTerm;
-		this->iTerm = iTerm * ENCODERINTSAMPLETIME;
-	    this->dTerm = dTerm * ENCODERINTFREQ;
-	    Serial.begin(9600);
-  		this->dropinPrintHelp();
+			this->pTerm = pTerm;
+			this->iTerm = iTerm;
+		    this->dTerm = dTerm;
+
+			Serial.begin(9600);
+
+			tempSettings.P.f = pTerm;
+			tempSettings.I.f = iTerm;
+			tempSettings.D.f = dTerm;
+			tempSettings.invert = invert;
+			tempSettings.runCurrent = runCurrent;
+			tempSettings.holdCurrent = holdCurrent;
+			tempSettings.checksum = this->dropinSettingsCalcChecksum(&tempSettings);
+
+			if(tempSettings.checksum != EEPROM.read(sizeof(dropinCliSettings_t)))
+			{
+				this->dropinSettings = tempSettings;
+				this->saveDropinSettings();
+				this->loadDropinSettings();
+			}
+			else
+			{
+				if(!this->loadDropinSettings())
+				{
+					this->dropinSettings = tempSettings;
+					this->saveDropinSettings();
+					this->loadDropinSettings();
+				}
+			}
+			delay(10000);
+  			this->dropinPrintHelp();
+		}
+		else
+		{
+			//Scale supplied controller coefficents. This is done to enable the user to use easier to manage numbers for these coefficients.
+		    this->pTerm = pTerm;
+			this->iTerm = iTerm * ENCODERINTSAMPLETIME;
+		    this->dTerm = dTerm * ENCODERINTFREQ;
+		}
 	}
+
+	this->checkConnectorOrientation(mode);
+	this->encoder.setHome();
+
 	this->pidDisabled = 0;
 	TCNT3 = 0;
 	ICR3 = 159;
@@ -1722,6 +1749,41 @@ void uStepperSLite::parseCommand(String *cmd)
       Serial.print(this->driver.getHoldCurrent());
       Serial.println(F(" %"));
   }
+
+  /****************** Get PID Parameters ***********************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,10) == String("parameters"))
+  {
+      if(cmd->charAt(10) != ';')
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+      Serial.print(F("P: "));
+      Serial.print(this->dropinSettings.P.f,4);
+      Serial.print(F(", "));
+      Serial.print(F("I: "));
+      Serial.print(this->dropinSettings.I.f,4);
+      Serial.print(F(", "));
+      Serial.print(F("D: "));
+      Serial.println(this->dropinSettings.D.f,4);
+  }
+
+  /****************** Help menu ********************************
+  *                                                            *
+  *                                                            *
+  **************************************************************/
+  else if(cmd->substring(0,4) == String("help"))
+  {
+      if(cmd->charAt(4) != ';')
+      {
+        Serial.println("COMMAND NOT ACCEPTED");
+        return;
+      }
+      this->dropinPrintHelp();
+  }
   
 /****************** SET run current ***************************
   *                                                            *
@@ -1888,6 +1950,8 @@ void uStepperSLite::dropinPrintHelp()
 	Serial.println(F("uStepper S-lite Dropin !"));
 	Serial.println(F(""));
 	Serial.println(F("Usage:"));
+	Serial.println(F("Show this command list: 'help;'"));
+	Serial.println(F("Get PID Parameters: 'parameters;'"));
 	Serial.println(F("Set Proportional constant: 'P=10.002;'"));
 	Serial.println(F("Set Integral constant: 'I=10.002;'"));
 	Serial.println(F("Set Differential constant: 'D=10.002;'"));
@@ -1898,4 +1962,47 @@ void uStepperSLite::dropinPrintHelp()
 	Serial.println(F("Set Hold Current (percent): 'holdCurrent=50.0;'"));
 	Serial.println(F(""));
 	Serial.println(F(""));
+}
+
+bool uStepperSLite::loadDropinSettings(void)
+{
+	dropinCliSettings_t tempSettings;
+
+	EEPROM.get(0,tempSettings);
+
+	if(this->dropinSettingsCalcChecksum(&tempSettings) != tempSettings.checksum)
+	{
+		return 0;
+	}
+
+	this->dropinSettings = tempSettings;
+
+	this->pTerm = this->dropinSettings.P.f;
+	this->iTerm = this->dropinSettings.I.f;
+	this->dTerm = this->dropinSettings.D.f;
+	this->invertDropinDir((bool)this->dropinSettings.invert);
+	this->setCurrent(this->dropinSettings.runCurrent,this->dropinSettings.holdCurrent);	
+	return 1;
+}
+
+void uStepperSLite::saveDropinSettings(void)
+{
+	this->dropinSettings.checksum = this->dropinSettingsCalcChecksum(&this->dropinSettings);
+
+	EEPROM.put(0,this->dropinSettings);
+	EEPROM.put(sizeof(dropinCliSettings_t),this->dropinSettings.checksum);
+}
+
+uint8_t uStepperSLite::dropinSettingsCalcChecksum(dropinCliSettings_t *settings)
+{
+	uint8_t i;
+	uint8_t checksum = 0xAA;
+	uint8_t *p = (uint8_t*)settings;
+
+	for(i=0; i < 15; i++)
+	{		
+		checksum ^= *p++;
+	}
+
+	return checksum;
 }

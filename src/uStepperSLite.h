@@ -63,7 +63,7 @@
 *	downloaded and installed from FTDI's website:
 *	\warning http://www.ftdichip.com/Drivers/VCP.htm
 *	\warning             The uStepper S-lite should NOT be connected to the USB port while installing this driver !
-*	\warning This is not a problem for windows/linux users, as these drivers come with the arduino installation.???????????????????????????????????????????????
+*	\warning This is not (commonly) a problem for windows/linux users, as these drivers are most often already included in the OS
 *
 *	\par Theory
 *
@@ -136,6 +136,25 @@
 #error !!This library only supports the ATmega328pb MCU!!
 #endif
 
+#include <EEPROM.h>
+
+typedef union
+{
+	float f;
+	uint8_t bytes[4];
+}floatBytes_t;
+
+typedef struct 
+{
+	floatBytes_t P;
+	floatBytes_t I;
+	floatBytes_t D;
+	uint8_t invert;
+	uint8_t holdCurrent;
+	uint8_t runCurrent;
+	uint8_t checksum;
+}dropinCliSettings_t;
+
 #define SDA SDA0
 #define SCL SCL0
 #define TWSTO TWSTO0
@@ -159,7 +178,7 @@
 #include "TMC2208.h"
 #include "i2cMaster.h"
 
-/** Step generator frequency set to 100 kHz?????????????????????????????????*/
+/** Step generator frequency set to 100 kHz*/
 #define STEPGENERATORFREQUENCY 100000.0
 /** Full step definition*/
 #define FULL 1							
@@ -257,9 +276,6 @@ extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
  *             This interrupt routine is in charge of acceleration and deceleration.
  */
 extern "C" void TIMER3_COMPA_vect(void) __attribute__ ((signal,used,naked));
-
-extern "C" void PCINT2_vect(void) __attribute__ ((signal,used));
-
 extern "C" void INT0_vect(void) __attribute__ ((signal,used));
 extern "C" void INT1_vect(void) __attribute__ ((signal,used));
 
@@ -421,7 +437,7 @@ public:
 	volatile uint32_t stepDelay;			//offset 8
 	/** This variable tells the algorithm the direction of rotation for
 	 * the commanded move. */
-	volatile uint8_t stepGeneratorDirection;							//offset 12
+	volatile uint8_t stepGeneratorDirection;//offset 12
 	volatile int32_t decelToStopThreshold;	//offset 13
 
 	/** This variable tells the algorithm whether the motor should
@@ -430,7 +446,7 @@ public:
 	bool continous;							//offset 17
 
 	/** This variable contains the current PID error. */
-	volatile uint8_t pidError = 0;							//offset 18
+	volatile uint8_t pidError = 0;			//offset 18
 
 	/** This variable is used by the stepper algorithm to keep track of
 	 * which part of the acceleration profile the motor is currently
@@ -462,12 +478,10 @@ public:
 	 * value (acceleration/deceleration)or zero (cruise). */
 	float acceleration;				
 	
-	//address offset: 73
 	/** This variable contains the conversion coefficient from raw
 	* encoder data to number of steps */					
 	volatile float stepConversion;	
 	
-	//address offset: 95
 	/** This variable contains the proportional coefficient used by the
 	* PID */
 	float pTerm;	
@@ -478,7 +492,6 @@ public:
 	/** This variable contains the value for converting RPM to steps per second */	
 	float RPMToStepsPerSecond;
 
-	//address offset: 99
 	/** This variable contains the integral coefficient used by the PID */
 	float iTerm;	
 
@@ -488,7 +501,6 @@ public:
 	/** This variable contains the sensitivity of the stall function, and is set to a value between 0.0 and 1.0*/
 	float stallSensitivity = 0.992;
 
-	//address offset: 108
 	/** This variable converts an angle in degrees into a corresponding
 	 * number of steps*/
 	float angleToStep;	
@@ -497,7 +509,6 @@ public:
 	 * angle in degrees*/	
 	float stepToAngle;
 
-	//address offset: 112
 	/** This variable holds information on wether the motor is stalled or not.
 	0 = OK, 1 = stalled */
 	volatile bool stall;
@@ -518,9 +529,6 @@ public:
 	/** This variable holds the steps done in the PID since last reset*/	
 	volatile float pidStepsSinceReset;
 
-	/** This variable holds ?????????????????*/	
-	volatile int32_t indexPulses = 0;
-
 	/** This variable holds the target position*/	
 	volatile int32_t targetPosition;
 	
@@ -530,11 +538,8 @@ public:
 	/** This variable holds the bool telling if the motor should brake or not*/	
 	bool brake;
 
-	/** This variable holds ???????????*/		
-	volatile uint8_t indexPulseSize;
 	friend void TIMER1_COMPA_vect(void) __attribute__ ((signal,used));
 	friend void TIMER3_COMPA_vect(void) __attribute__ ((signal,used,naked));
-	friend void PCINT2_vect(void) __attribute__ ((signal,used));
 	friend void interrupt0(void);
 	friend void INT0_vect(void) __attribute__ ((signal,used));
 	friend void uStepperEncoder::setHome(void);	
@@ -762,13 +767,21 @@ public:
 	 * @param[in]  setHome          When set to true, the encoder position is
 	 *								Reset. When set to false, the encoder
 	 *								position is not reset.
+	 * @param[in]  invert           Inverts the motor direction for dropin
+	 *								feature. 0 = NOT invert, 1 = invert.
+	 *								this has no effect for other modes than dropin
+	 * @param[in]  runCurrent       Sets the current (in percent) to use while motor is running.
+	 * @param[in]  holdCurrent      Sets the current (in percent) to use while motor is NOT running
 	 */
 	void setup(	uint8_t mode = NORMAL, 
 				float stepsPerRevolution = 3200.0, 
 				float pTerm = 0.75, 
 				float iTerm = 3.0, 
 				float dTerm = 0.0,
-				bool setHome = true);	
+				bool setHome = true,
+				uint8_t invert = 0,
+				uint8_t runCurrent = 50,
+				uint8_t holdCurrent = 30);	
 
 	/**
 	 * @brief      Returns the direction the motor is currently configured to
@@ -964,11 +977,13 @@ public:
 	 *			
 	 */
 	void parseCommand(String *cmd);
-
+	
 	/**
 	 * @brief      	This method is used to print the dropinCli menu explainer:
 	 *				
 	 * 				Usage:
+	 *				Show this command list: 'help;'
+	 *				Get PID Parameters: 'parameters;'
 	 *				Set Proportional constant: 'P=10.002;'
 	 *				Set Integral constant: 'I=10.002;'
 	 *				Set Differential constant: 'D=10.002;'
@@ -990,6 +1005,12 @@ private:
 	 *			
 	 */
 	bool detectStall(void);
+
+	dropinCliSettings_t dropinSettings;
+
+	bool loadDropinSettings(void);
+	void saveDropinSettings(void);
+	uint8_t dropinSettingsCalcChecksum(dropinCliSettings_t *settings);
 };
 
 /** Global definition of I2C object for use in Arduino sketch */

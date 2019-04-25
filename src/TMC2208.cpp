@@ -199,8 +199,6 @@ void Tmc2208::setCurrent(uint8_t runPercent, uint8_t holdPercent)
 	this->setHoldCurrent(holdPercent);
 }
 
-
-
 void Tmc2208::setRunCurrent(uint8_t runPercent)
 {
 	int32_t registerSetting = 0;
