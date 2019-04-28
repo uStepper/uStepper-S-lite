@@ -1,3 +1,38 @@
+/********************************************************************************************
+*       File:       i2cMaster.cpp                           		                            *
+*       Version:    1.0.0                                                                   *
+*       Date:       April 29th, 2019                                                         *
+*       Author:     Thomas Hørring Olsen                                                    *
+*                                                                                           *   
+*********************************************************************************************
+*                       i2cMaster class                   		                            *
+*                                                                                           *
+*   This file contains the implementation of the class methods, used to communicate over 	*
+*	the I2C bus.																			*
+*                                                                                           *
+*********************************************************************************************
+*   (C) 2019                                                                                *
+*                                                                                           *
+*   uStepper ApS                                                                            *
+*   www.ustepper.com                                                                        *
+*   administration@ustepper.com                                                             *
+*                                                                                           *
+*   The code contained in this file is released under the following open source license:    *
+*                                                                                           *
+*           Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International         *
+*                                                                                           *
+*   The code in this file is provided without warranty of any kind - use at own risk!       *
+*   neither uStepper ApS nor the author, can be held responsible for any damage             *
+*   caused by the use of the code contained in this file !                                  *
+*                                                                                           *
+********************************************************************************************/
+/** @file i2cMaster.cpp
+ * @brief      	This file contains the implementation of the class methods, used to
+ * 				communicate over the I2C bus.
+ *
+ * @author     Thomas Hørring Olsen (thomas@ustepper.com)
+ */
+
 #include "i2cMaster.h"
 #include "Arduino.h"
 #include <util/delay.h>
@@ -209,8 +244,7 @@ void i2cMaster::begin(bool channel)
 	}
 	// set bit rate register to 12 to obtain 400kHz scl frequency (in combination with no prescaling!)
 	_SFR_MEM8(this->twbr) = 1;
-	// no prescaler
-	_SFR_MEM8(this->twsr) &= 0xFC;
+	
 }
 
 void* i2cMaster::operator new(size_t size)

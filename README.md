@@ -51,6 +51,11 @@ The documentation for this library can be found at the following URL:
 
 http://ustepper.com/docs/ustepperslite/html/index.html
 
+##To Do
+- Update keywords.txt
+- Better comments
+- Variable cleanup
+
 ## Known Bugs
 - none
 

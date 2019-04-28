@@ -1,7 +1,7 @@
 /********************************************************************************************
 * 	 	File: 		uStepperSLite.cpp															*
 *		Version:    1.0.0                                           						*
-*      	Date: 		April 4th, 2019 	                                    				*
+*      	Date: 		April 29th, 2019 	                                    				*
 *      	Author: 	Thomas Hørring Olsen                                   					*
 *                                                   										*	
 *********************************************************************************************
@@ -1145,17 +1145,12 @@ float uStepperSLite::moveToEnd(bool dir, float stallSensitivity)
 	uint8_t checks = 0;
   	float pos = 0.0;
   	float lengthMoved;
-  	float tempVelocity;
 
   	if(this->mode == DROPIN)
   	{
   		return 0.0;		//Doesn't make sense in dropin mode
   	}
-  	tempVelocity = this->velocity;
-  	if(this->velocity > 500.0)
-  	{
-  		//this->setMaxVelocity(500.0);
-  	}
+
   	lengthMoved = this->encoder.getAngleMoved();
 
   	this->stop(HARD);
@@ -1171,7 +1166,6 @@ float uStepperSLite::moveToEnd(bool dir, float stallSensitivity)
 		_delay_ms(1);
 	}
 	_delay_ms(100);
-	//this->setMaxVelocity(tempVelocity);
 	if(dir == CW)
 	{
 		lengthMoved = this->encoder.getAngleMoved() - lengthMoved;
@@ -1189,11 +1183,6 @@ void uStepperSLite::moveToAngle(float angle, bool holdMode)
 {
 	float diff;
 	uint32_t steps;
-
-	if(this->encoder.detectMagnet())
-	{
-		//return;		//Magnet Not Detected. Abort
-	}
 
 	diff = angle - this->encoder.getAngleMoved();
 	steps = (uint32_t)((abs(diff)*angleToStep) + 0.5);

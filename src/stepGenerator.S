@@ -1,8 +1,39 @@
+/********************************************************************************************
+*       File:       stepGenerator.S                        		                            *
+*       Version:    1.0.0                                                                   *
+*       Date:       April 29th, 2019                                                         *
+*       Author:     Thomas Hørring Olsen                                                    *
+*                                                                                           *   
+*********************************************************************************************
+*                       stepGenerator                   		                            *
+*                                                                                           *
+*		This file contains the assembler implementation of the step generation algorithm 	*
+*                                                                                           *
+*********************************************************************************************
+*   (C) 2019                                                                                *
+*                                                                                           *
+*   uStepper ApS                                                                            *
+*   www.ustepper.com                                                                        *
+*   administration@ustepper.com                                                             *
+*                                                                                           *
+*   The code contained in this file is released under the following open source license:    *
+*                                                                                           *
+*           Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International         *
+*                                                                                           *
+*   The code in this file is provided without warranty of any kind - use at own risk!       *
+*   neither uStepper ApS nor the author, can be held responsible for any damage             *
+*   caused by the use of the code contained in this file !                                  *
+*                                                                                           *
+********************************************************************************************/
+/** @file stepGenerator.S
+ * @brief      	This file contains the assembler implementation of the step generation algorithm
+ *
+ * @author     Thomas Hørring Olsen (thomas@ustepper.com)
+ */
+
 .global _stepGenerator
 
 .section .text
-
-
 
 _stepGenerator:
 

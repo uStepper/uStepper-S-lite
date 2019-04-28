@@ -15,7 +15,7 @@ void loop() {
   if(!stepper.getMotorState())
   {
    
-    stepper.moveSteps(3000, !stepper.getCurrentDirection(), HARD);
+    stepper.moveSteps(3200, !stepper.getCurrentDirection(), HARD);
   }
    Serial.print("Angle: ");
    Serial.print(stepper.encoder.getAngle());
