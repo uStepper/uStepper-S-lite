@@ -1,3 +1,41 @@
+/********************************************************************************************
+*       File:       TMC2208.cpp                           		                            *
+*       Version:    1.0.0                                                                   *
+*       Date:       April 29th, 2019                                                         *
+*       Author:     Thomas Hørring Olsen                                                    *
+*                                                                                           *   
+*********************************************************************************************
+*                       TMC2208 class                   		                            *
+*                                                                                           *
+*   This file contains the implementation of the class methods, incorporated in the         *
+*   TMC2208 Arduino library.																*
+*                                                                                           *
+*********************************************************************************************
+*   (C) 2019                                                                                *
+*                                                                                           *
+*   uStepper ApS                                                                            *
+*   www.ustepper.com                                                                        *
+*   administration@ustepper.com                                                             *
+*                                                                                           *
+*   The code contained in this file is released under the following open source license:    *
+*                                                                                           *
+*           Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International         *
+*                                                                                           *
+*   The code in this file is provided without warranty of any kind - use at own risk!       *
+*   neither uStepper ApS nor the author, can be held responsible for any damage             *
+*   caused by the use of the code contained in this file !                                  *
+*                                                                                           *
+********************************************************************************************/
+/** @file TMC2208.cpp
+ * @brief      Function prototypes and definitions for the TMC2208
+ *             library
+ *
+ *             This file contains the implementations of the classes defined in
+ *             TMC2208.h
+ *
+ * @author     Thomas Hørring Olsen (thomas@ustepper.com)
+ */
+
 #include "TMC2208.h"
 
 uint8_t Tmc2208::calcCRC(uint8_t datagram[], uint8_t len) {
@@ -20,7 +58,7 @@ uint8_t Tmc2208::calcCRC(uint8_t datagram[], uint8_t len) {
 void Tmc2208::writeRegister(uint8_t address, int32_t value)
 {
 	uint8_t writeData[8];
-	cli();
+	//cli();
 	writeData[0] = 0x05;                         // Sync byte
 	writeData[1] = 0x00;                         // Slave address
 	writeData[2] = address | TMC2208_WRITE_BIT;  // Register address with write bit set
@@ -34,7 +72,7 @@ void Tmc2208::writeRegister(uint8_t address, int32_t value)
 	{
 		this->uartSendByte(writeData[i]);	
 	}
-	sei();
+	//sei();
 }
 
 void Tmc2208::readRegister(uint8_t address, int32_t *value)
@@ -88,12 +126,13 @@ void Tmc2208::setup(void)
 	this->writeRegister(TMC2208_GCONF, registerSetting);
 	registerSetting = 5000;
 	this->writeRegister(TMC2208_TPWMTHRS, registerSetting);
-	this->setCurrent(75,75);
+	this->setCurrent(60,30);
 	this->setVelocity(0);	
 }
 
 void Tmc2208::invertDirection(bool normal)
 {
+	cli();
 	int32_t registerSetting;
 	registerSetting = R00;
 	if(normal == NORMALDIRECTION)
@@ -105,6 +144,7 @@ void Tmc2208::invertDirection(bool normal)
 		registerSetting |= TMC2208_PDN_DISABLE_MASK | TMC2208_INDEX_STEP_MASK | TMC2208_SHAFT_MASK;
 	}
 	this->writeRegister(TMC2208_GCONF, registerSetting);
+	sei();
 }
 
 void Tmc2208::enableDriver(void)
@@ -163,14 +203,8 @@ void Tmc2208::setRunCurrent(uint8_t runPercent)
 {
 	int32_t registerSetting = 0;
 
-	if(runPercent >= 100)
-	{
-		this->runCurrent = 31;
-	}
-	else
-	{
-		this->runCurrent = ((uint8_t)(float)runPercent * 0.32) - 1; 
-	}
+	uint8_t temp = (uint8_t)((float)runPercent * 0.31f) ;
+	this->runCurrent = temp > 31 ? 31 : temp ;
 
 	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
 	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
@@ -182,19 +216,13 @@ void Tmc2208::setHoldCurrent(uint8_t holdPercent)
 {
 	int32_t registerSetting = 0;
 
-	if(holdPercent >= 100)
-	{
-		this->holdCurrent = 31;
-	}
-	else
-	{
-		this->holdCurrent = ((uint8_t)(float)holdPercent * 0.32) - 1; 
-	}
+ 	uint8_t temp = (uint8_t)((float)holdPercent * 0.31f) ;
+ 	this->holdCurrent = temp > 31 ? 31 : temp ;
 
-	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
-	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
+ 	registerSetting |= (((int32_t)(this->holdCurrent & 0x1F)) << TMC2208_IHOLD_SHIFT );
+ 	registerSetting |= (((int32_t)(this->runCurrent & 0x1F)) << TMC2208_IRUN_SHIFT );
 
-	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
+ 	this->writeRegister(TMC2208_IHOLD_IRUN, registerSetting);
 }
 
 void Tmc2208::setVelocity(float RPM)
@@ -207,4 +235,14 @@ void Tmc2208::setVelocity(float RPM)
 	RPM = (int32_t)(dummy + 0.5);
 
 	this->writeRegister(TMC2208_VACTUAL, RPM);
+}
+
+float Tmc2208::getRunCurrent(void)
+{
+	return ((float)this->runCurrent)/0.31;
+}
+
+float Tmc2208::getHoldCurrent(void)
+{
+	return ((float)this->holdCurrent)/0.31;
 }

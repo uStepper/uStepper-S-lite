@@ -1,3 +1,37 @@
+/********************************************************************************************
+*       File:       i2cMaster.h                          		                            *
+*       Version:    1.0.0                                                                   *
+*       Date:       April 29th, 2019                                                         *
+*       Author:     Thomas Hørring Olsen                                                    *
+*                                                                                           *   
+*********************************************************************************************
+*                       i2cMaster class                   		                            *
+*                                                                                           *
+*   This file contains the implementation of the class methods, used to communicate over 	*
+*	the I2C bus.																			*
+*                                                                                           *
+*********************************************************************************************
+*   (C) 2019                                                                                *
+*                                                                                           *
+*   uStepper ApS                                                                            *
+*   www.ustepper.com                                                                        *
+*   administration@ustepper.com                                                             *
+*                                                                                           *
+*   The code contained in this file is released under the following open source license:    *
+*                                                                                           *
+*           Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International         *
+*                                                                                           *
+*   The code in this file is provided without warranty of any kind - use at own risk!       *
+*   neither uStepper ApS nor the author, can be held responsible for any damage             *
+*   caused by the use of the code contained in this file !                                  *
+*                                                                                           *
+********************************************************************************************/
+/** @file i2cMaster.h
+ * @brief      	This file contains the implementation of the class methods, used to
+ * 				communicate over the I2C bus.
+ *
+ * @author     Thomas Hørring Olsen (thomas@ustepper.com)
+ */
 #ifndef _I2CMASTER_H_
 #define _I2CMASTER_H_
 
@@ -91,6 +125,17 @@ class i2cMaster
 		 *             this class, called "I2C".
 		 */
 		i2cMaster(bool channel);
+
+		/**
+		 * @brief      Constructor
+		 *
+		 *             This is the constructor, used to instantiate an I2C
+		 *             object. Under normal circumstances, this should not be
+		 *             needed by the programmer of the arduino sketch, since
+		 *             this library already has a global object instantiation of
+		 *             this class, called "I2C".
+		 */
+		i2cMaster(void);
 		
 		/**
 		 * @brief      Reads a byte from the I2C bus.
@@ -236,6 +281,15 @@ class i2cMaster
 		 *             encoder object.
 		 */
 		void begin(void);
+
+		/**
+		 * @brief      Setup TWI (I2C) interface
+		 *
+		 *             This function sets up the TWI interface, and is
+		 *             automatically called in the instantiation of the uStepper
+		 *             encoder object.
+		 */
+		void begin(bool channel);
 };
 
 #endif

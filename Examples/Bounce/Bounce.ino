@@ -7,7 +7,7 @@ void setup() {
   stepper.setup();
   stepper.setMaxAcceleration(2000);
   stepper.setMaxVelocity(1500);
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
 
 void loop() {
@@ -15,7 +15,7 @@ void loop() {
   if(!stepper.getMotorState())
   {
    
-    stepper.moveSteps(3000, !stepper.getCurrentDirection(), HARD);
+    stepper.moveSteps(3200, !stepper.getCurrentDirection(), HARD);
   }
    Serial.print("Angle: ");
    Serial.print(stepper.encoder.getAngle());

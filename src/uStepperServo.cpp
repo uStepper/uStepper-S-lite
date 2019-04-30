@@ -1,14 +1,14 @@
 /********************************************************************************************
-*       File:       uStepper.cpp                                                            *
-*       Version:    1.3.0                                                                   *
-*       date:       January 10th, 2018                                                      *
+*       File:       uStepperServo.cpp                                                       *
+*       Version:    1.0.0                                                                   *
+*       Date:       April 29th, 2019                                                         *
 *       Author:     Thomas Hørring Olsen                                                    *
 *                                                                                           *   
 *********************************************************************************************
 *                       uStepperServo class                                                 *
 *                                                                                           *
 *   This file contains the implementation of the class methods, incorporated in the         *
-*   uStepperServo arduino library. The library is used by instantiating an uStepperServo    *
+*   uStepperServo Arduino library. The library is used by instantiating an uStepperServo    *
 *   object by calling either of the two overloaded constructors:                            *
 *                                                                                           *
 *       example:                                                                            *
@@ -35,7 +35,7 @@
 *   ~90-180deg. These values can be redefined to fit your servos specifications by calling  *
 *    the setMaximumPulse and SetMinimumPulse functions. However, because of running the     *
 *    stepper algorithm simultaniously with the servo, there is a risk of twitching if       *
-*    using lower values than the 1500 us.                                                   *                           *
+*    using lower values than the 1500 us.                                                   *                          
 *                                                                                           *
 *       example:                                                                            *
 *                                                                                           *
@@ -70,7 +70,7 @@
 *   After this, the library is ready to control the Servo!                                  *
 *                                                                                           *
 *********************************************************************************************
-*   (C) 2018                                                                                *
+*   (C) 2019                                                                                *
 *                                                                                           *
 *   uStepper ApS                                                                            *
 *   www.ustepper.com                                                                        *
@@ -86,10 +86,11 @@
 *                                                                                           *
 ********************************************************************************************/
 /** @file uStepperServo.cpp
- * @brief      Class implementations for the uStepper library
+ * @brief      Function prototypes and definitions for the uStepper Servo
+ *             library
  *
  *             This file contains the implementations of the classes defined in
- *             uStepper.h
+ *             uStepperServo.h
  *
  * @author     Thomas Hørring Olsen (thomas@ustepper.com)
  */
@@ -200,7 +201,7 @@ void uStepperServo::refresh()
 	uint16_t go = start + s[i]->pulse;// current time + pulse length for specific servo
 
 	// loop until we reach or pass 'go' time
-    
+    cli();
 	for (;;) {
 	    now = TCNT0;
 	    if ( now < last) base += 256;//Timer 0 tops at 255, so add 256 on overflow
@@ -208,14 +209,15 @@ void uStepperServo::refresh()
                   
         if(base + now >= go - 16)
         {
-            cli();
+            
         }
 
 	    if ( base+now > go) {
 		digitalWrite( s[i]->pin,0);
-        sei();
+        
 		break;
 	    }
 	}
+    sei();
     }
 }

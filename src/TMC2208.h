@@ -1,3 +1,35 @@
+/********************************************************************************************
+*       File:       TMC2208.h                                                           	*
+*       Version:    1.0.0                                                                   *
+*       Date:       April 29th, 2019                                                         *
+*       Author:     Thomas Hørring Olsen                                                    *
+*                                                                                           *   
+*********************************************************************************************
+*   (C) 2019                                                                                *
+*                                                                                           *
+*   uStepper ApS                                                                            *
+*   www.ustepper.com                                                                        *
+*   administration@ustepper.com                                                             *
+*                                                                                           *
+*   The code contained in this file is released under the following open source license:    *
+*                                                                                           *
+*           Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International         *
+*                                                                                           *
+*   The code in this file is provided without warranty of any kind - use at own risk!       *
+*   neither uStepper ApS nor the author, can be held responsible for any damage             *
+*   caused by the use of the code contained in this file !                                  *
+*                                                                                           *
+********************************************************************************************/
+/** @file TMC2208.h
+ * @brief      Function prototypes and definitions for the uStepper TMC2208 driver
+ *             library
+ *
+ *             This file contains class and function prototypes for the library,
+ *             as well as necessary constants and global variables.
+ *
+ * @author     Thomas Hørring Olsen (thomas@ustepper.com)
+ */
+
 #ifndef TMC2208_H_
 #define TMC2208_H_
 
@@ -6,26 +38,19 @@
 	#include <avr/pgmspace.h>
 	#include <Arduino.h>
 	#include <util/delay.h>
-
-	#define TMC2208_MAX_VELOCITY      STEPDIR_MAX_VELOCITY
-	#define TMC2208_MAX_ACCELERATION  16777215
-
-	#define ERRORS_VM        (1<<0)
-	#define ERRORS_VM_UNDER  (1<<1)
-	#define ERRORS_VM_OVER   (1<<2)
-
-	#define VM_MIN  50   // VM[V/10] min
-	#define VM_MAX  390  // VM[V/10] max
-
-	#define CRC8_GEN 0x07
-
-	#define TIMEOUT_VALUE 10 // 10 ms
-
+	
+	/** @name default values	 
+	*	default values for non-zero registers
+	*/
+	///@{
 	#define R00 0x00000041
 	#define R10 0x00001F00
 	#define R6C 0x10000053
 	#define R70 0xC10D0024
-
+	///@}
+	
+	/** @name Register addresses	 */
+	///@{
 	// ===== TMC2208 & 2202 & TMC2208 & 2220 & 2225 "Donkey Kong" family register set =====
 	#define TMC2208_GCONF         0x00
 	#define TMC2208_GSTAT         0x01
@@ -50,7 +75,12 @@
 	#define TMC2208_PWMCONF       0x70
 	#define TMC2208_PWMSCALE      0x71
 	#define TMC2208_PWM_AUTO      0x72
-
+	///@}
+	
+	/**
+	* \defgroup Bit masks and shift patterns for every bit in each register
+	* @{
+	*/
 	// Write-Bit
 	#define TMC2208_WRITE_BIT 0x80
 
@@ -176,7 +206,7 @@
 	#define TMC2208_OLB_SHIFT                    7 // min.: 0, max.: 1, default: 0
 	#define TMC2208_T120_MASK                    0x0100 // DRV_STATUS // 120°C comparator
 	#define TMC2208_T120_SHIFT                   8 // min.: 0, max.: 1, default: 0
-	#define TMC2208_T143_MASK                    0x0200 // DRV_STATUS // 1430°C comparator
+	#define TMC2208_T143_MASK                    0x0200 // DRV_STATUS // 143°C comparator
 	#define TMC2208_T143_SHIFT                   9 // min.: 0, max.: 1, default: 0
 	#define TMC2208_T150_MASK                    0x0400 // DRV_STATUS // 150°C comparator
 	#define TMC2208_T150_SHIFT                   10 // min.: 0, max.: 1, default: 0
@@ -212,86 +242,145 @@
 	#define TMC2208_PWM_OFS_AUTO_SHIFT           0 // min.: 0, max.: 255, default: 0
 	#define TMC2208_PWM_GRAD_AUTO_MASK           0xFF0000 // PWM_AUTO // Automatically  determined gradient value
 	#define TMC2208_PWM_GRAD_AUTO_SHIFT          16 // min.: 0, max.: 255, default: 0
+	/**@}*/
 
-	#define  BIT0   0x00000001
-	#define  BIT1   0x00000002
-	#define  BIT2   0x00000004
-	#define  BIT3   0x00000008
-	#define  BIT4   0x00000010
-	#define  BIT5   0x00000020
-	#define  BIT6   0x00000040
-	#define  BIT7   0x00000080
-	#define  BIT8   0x00000100
-	#define  BIT9   0x00000200
-	#define  BIT10  0x00000400
-	#define  BIT11  0x00000800
-	#define  BIT12  0x00001000
-	#define  BIT13  0x00002000
-	#define  BIT14  0x00004000
-	#define  BIT15  0x00008000
-	#define  BIT16  0x00010000
-	#define  BIT17  0x00020000
-	#define  BIT18  0x00040000
-	#define  BIT19  0x00080000
-	#define  BIT20  0x00100000
-	#define  BIT21  0x00200000
-	#define  BIT22  0x00400000
-	#define  BIT23  0x00800000
-	#define  BIT24  0x01000000
-	#define  BIT25  0x02000000
-	#define  BIT26  0x04000000
-	#define  BIT27  0x08000000
-	#define  BIT28  0x10000000
-	#define  BIT29  0x20000000
-	#define  BIT30  0x40000000
-	#define  BIT31  0x80000000
-
-	// Static Array length
+	/** Define to calculate size of array*/
 	#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
-
-	#ifndef NULL
-		#define NULL ((void *) 0)
-	#endif
-
-	#define BAUD 115200UL
-
+	
+	/** @name software UART pins	 
+	*	Defines to map pins of the software UART for the driver chip
+	*/
+	///@{
 	#define UARTTXPORT PORTC
 	#define UARTTXDDR DDRC
 	#define UARTTXPIN 3
-
 	#define UARTRXPORT PORTC
 	#define UARTRXDDR DDRC
 	#define UARTRXPIN 2
+	///@}
 
 	#define NORMALDIRECTION 0
 	#define INVERSEDIRECTION 1
 
 	// 2us delay (30 nops @ 62.5ns = 1.875us + C overhead ~ 2us) 500k baud
+	/** */
 	#define UARTCLKDELAY() 	__asm__ volatile ( 	"nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" "nop \n\t" )
 
+/**
+ * @brief      Prototype of class for accessing all features of the TMC2208 in
+ *             a single object.
+ *
+ *             This class enables the user of the library to access the implemented features
+ *             of the TMC2208 driver, by use of a single object.
+ */
 class Tmc2208
 {
-	public:
-		Tmc2208(void);
-		void setup(void);
-		void disableDriver(void);
-		void enableDriver(void);
-		void setCurrent(uint8_t runPercent, uint8_t holdPercent);
-		void setHoldCurrent(uint8_t holdPercent);
-		void setRunCurrent(uint8_t runPercent);
-		void setVelocity(float RPM);
-		void invertDirection(bool normal = INVERSEDIRECTION);
+public:
+	/**
+	* @brief      Constructor
+	*
+	*             This is the constructor of the TMC2208 class.
+	*/
+	Tmc2208(void);
 
-	private:
-		void writeRegister(uint8_t address, int32_t value);
-		void readRegister(uint8_t address, int32_t *value);
-		uint8_t calcCRC(uint8_t datagram[], uint8_t len);
-		void uartInit(void);
-		void uartSendByte(uint8_t value);
-		bool uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)));
+	/**
+	* @brief      Initializes the different parts of the TMC2208 object
+	*
+	*             This function initializes the different parts of the TMC2208
+	*             object, and is called in the setup() function of the
+	*             uStepper S-lite object. This function is needed to setup basic registers of the TMC2208.
+	*
+	*/	
+	void setup(void);
 
-		uint8_t runCurrent;
-		uint8_t holdCurrent;
+	/**
+	* @brief      Disable the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user disable the stepper driver.
+	*
+	*/
+	void disableDriver(void);
+
+	/**
+	* @brief      Enable the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user enable the stepper driver.
+	*
+	*/
+	void enableDriver(void);
+
+	/**
+	* @brief      Change run and hold current settings of the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user manipulate both run and hold current settings.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
+	*			  Calls setCurrent and setHoldCurrent.
+	*
+	* @param      runPercent     -	Run current in percentage of max current i.e. from 0 to 100.
+	* @param      holdPercent    -	Hold current in percentage of max current i.e. from 0 to 100.
+	*
+	*/
+	void setCurrent(uint8_t runPercent, uint8_t holdPercent);
+
+	/**
+	* @brief      Change hold current setting of the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user manipulate hold current.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
+	*
+	* @param      holdPercent    -	Hold current in percentage of max current i.e. from 0 to 100.
+	*
+	*/
+	void setHoldCurrent(uint8_t holdPercent);
+
+	/**
+	* @brief      Change run current setting of the stepper motor driver - TMC2208.
+	*
+	*             This function lets the user manipulate run current.
+	*			  Arguments accept natural number from zero (0) to hundred (100).
+	*
+	* @param      runPercent     -	Run current in percentage of max current i.e. from 0 to 100.
+	*
+	*/	
+	void setRunCurrent(uint8_t runPercent);
+
+	/**
+	* @brief      Set motor velocity in RPM.
+	*
+	*             This function lets the user command a run speed in RPM for open loop speed control.
+	*
+	* @param      RPM     -	Desired speed of the motor in RPM.
+	*
+	*/
+	void setVelocity(float RPM);
+
+	/**
+	* @brief      Invert motor direction.
+	*
+	*             This function lets the user invert the motor direction - i.e. changing CW to CCW and vise versa.
+	*
+	* @param      normal     -	Can be set to either INVERSEDIRECTION or NORMALDIRECTION.
+	*
+	*/	
+	void invertDirection(bool normal = INVERSEDIRECTION);
+	float getRunCurrent(void);
+	float getHoldCurrent(void);
+protected:
+	/** This variable holds the commanded run current
+	*/	
+	uint8_t runCurrent;
+
+	/** This variable holds the commanded hold current
+	*/	
+	uint8_t holdCurrent;
+
+	void writeRegister(uint8_t address, int32_t value);
+	void readRegister(uint8_t address, int32_t *value);
+	uint8_t calcCRC(uint8_t datagram[], uint8_t len);
+	void uartInit(void);
+	void uartSendByte(uint8_t value);
+	bool uartReceivePacket(uint8_t *packet __attribute__((unused)), uint8_t size __attribute__((unused)));
+		
 };
 
 #endif
