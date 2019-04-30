@@ -5,7 +5,7 @@
 * The only thing needed to activate closed loop control, is in the stepper.setup() function, where the
 * object is initiated with the keyword "PID", followed by the number of steps per revolution setting, and the P, I and D coefficients.
 * For more information, check out the documentation:
-* http://ustepper.com/docs/html/index.html
+* http://ustepper.com/docs/ustepperslite/html/index.html
 *
 * Once the PID is activated, the use of the library is the same as without the PID !
 *

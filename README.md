@@ -51,6 +51,10 @@ The documentation for this library can be found at the following URL:
 
 http://ustepper.com/docs/ustepperslite/html/index.html
 
+### MAC (and a few Windows) Users:
+In order to make the uStepper S-lite show up in the "ports" list, you need to install the VCP driver from the following link: 
+https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers
+
 ##To Do
 - Update keywords.txt
 - Better comments
