@@ -1203,7 +1203,7 @@ void uStepperSLite::moveAngle(float angle, bool holdMode)
 
 	if(angle < 0.0)
 	{
-		steps = -(int32_t)((angle*angleToStep) - 0.5);
+		steps = (int32_t)abs(((angle*angleToStep) - 0.5));
 		this->moveSteps(steps, CCW, holdMode);
 	}
 	else
@@ -1219,7 +1219,7 @@ void uStepperSLite::pid(float error)
 	float limit = abs(this->currentPidSpeed) + 6000.0;
 	static float integral;
 	static bool integralReset = 0;
-
+	
 	if(this->pidDisabled)
 	{
 		integral = 0.0;
