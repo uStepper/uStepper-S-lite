@@ -52,12 +52,12 @@ push r18
 push r20
 
 ldd r16,z+_CONTINOUS
-sbrc r16,0
+sbrc r16,0          ;If running continous, we just need to check if its time to give a step
 rjmp _checkRdy
 
 ldd r16,z+_PIDERROR
 cpi r16,0
-brne _runAlgorithm
+brne _runAlgorithm      
 ldd r16,z+_STATE
 ldi r17,1
 cpse r16,r17
