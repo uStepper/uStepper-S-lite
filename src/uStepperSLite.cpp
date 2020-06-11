@@ -649,13 +649,13 @@ void uStepperSLite::runContinous(bool dir)
 
 		if(dir == CW)
 		{
-			this->decelToAccelThreshold = this->targetPosition + initialDecelSteps;
+			this->decelToAccelThreshold = this->stepsSinceReset + initialDecelSteps;
 			this->accelToCruiseThreshold = this->decelToAccelThreshold + accelSteps;
 			PORTB |= (1 << 2);
 		}
 		else
 		{
-			this->decelToAccelThreshold = this->targetPosition - initialDecelSteps;
+			this->decelToAccelThreshold = this->stepsSinceReset - initialDecelSteps;
 			this->accelToCruiseThreshold = this->decelToAccelThreshold - accelSteps;
 			PORTB &= ~(1 << 2);
 		}
@@ -698,12 +698,13 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 	{
 		return;
 	}
-
+	//steps--;
 	totalSteps = steps;
 	cli();
 		curVel = this->currentPidSpeed;
 	sei();
-	steps--;
+	
+	
 	initialDecelSteps = 0;
 
 	if(this->state == STOP)								//If motor is currently at full stop (state = STOP)
@@ -782,7 +783,7 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 				cruiseSteps = totalSteps - accelSteps - decelSteps; 			//Perform remaining steps, as cruise steps
 			}
 
-			cruiseSteps = steps - accelSteps - decelSteps;	//Perform remaining steps as cruise steps
+			cruiseSteps = totalSteps - accelSteps - decelSteps;	//Perform remaining steps as cruise steps
 			initialDecelSteps = 0;								//No initial deceleration phase needed
 		}
 
@@ -800,7 +801,7 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 			}
 			else
 			{
-				cruiseSteps = steps - decelSteps;	//Perform remaining steps as cruise steps
+				cruiseSteps = totalSteps - decelSteps;	//Perform remaining steps as cruise steps
 			}
 		}
 		startVelocity = curVel;
@@ -871,11 +872,6 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 
 void uStepperSLite::hardStop(bool holdMode)
 {
-	this->stop(holdMode);
-}
-
-void uStepperSLite::stop(bool brake)
-{
 	if(this->mode == DROPIN)
 	{
 		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
@@ -899,12 +895,57 @@ void uStepperSLite::stop(bool brake)
 	{
 		this->enableMotor();
 	}
+}
 
+void uStepperSLite::stop(bool brake)
+{
+	this->softStop(brake);
 }
 
 void uStepperSLite::softStop(bool holdMode)
 {
-	this->stop(holdMode);
+	uint32_t decelSteps = 0;
+	float curVel = 0.0;
+
+	if(this->mode == DROPIN)
+	{
+		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
+	}
+	
+	cli();
+	curVel = this->currentPidSpeed;
+	decelSteps = (uint32_t)((curVel*curVel)/(2.0*this->acceleration));
+	if(this->direction == CW)
+	{
+		this->targetPosition = this->stepsSinceReset + decelSteps;
+		pointer->decelToStopThreshold = this->targetPosition;
+	}
+	else
+	{
+		this->targetPosition = this->stepsSinceReset - decelSteps;
+		pointer->decelToStopThreshold = this->targetPosition;
+	}
+
+	this->state = DECEL;
+	this->brake = holdMode;
+	this->continous = 0;
+	this->currentPidSpeed = curVel;
+	if(pointer->currentPidSpeed > 5.0)
+	{
+		pointer->stepDelay = (uint32_t)((STEPGENERATORFREQUENCY/(pointer->currentPidSpeed)) + 0.5);
+	}
+	else if(pointer->currentPidSpeed < -5.0)
+	{
+		pointer->stepDelay = (uint32_t)((STEPGENERATORFREQUENCY/(-pointer->currentPidSpeed)) + 0.5);
+	}
+	else
+	{
+		pointer->stepDelay = 20000;
+	}
+	sei();
+
+	PORTD &= ~(1 << 4);
+	TCCR3B |= (1 << CS30);
 }
 
 void uStepperSLite::checkConnectorOrientation(uint8_t mode)
