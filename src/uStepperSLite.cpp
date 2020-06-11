@@ -877,24 +877,22 @@ void uStepperSLite::hardStop(bool holdMode)
 		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
 	}
 
-
-	TCCR3B &= ~(1 << CS30);
-	pointer->driver.setVelocity(0);
+	cli();
+	
+	this->stepsSinceReset = (int32_t)((float)this->encoder.angleMoved * this->stepConversion);
 	this->targetPosition = this->stepsSinceReset;
-	pointer->cruiseToDecelThreshold = this->targetPosition;
-	this->brake = brake;
-	this->stall = 0;
-	this->state = STOP;			//Set current state to STOP
-	this->continous = 0;
-	if(brake == BRAKEOFF)
-	{
-		this->disableMotor();
-	}
+	this->pidTargetPosition = this->targetPosition;
+	this->decelToStopThreshold = this->targetPosition;
 
-	else if (brake == BRAKEON)
-	{
-		this->enableMotor();
-	}
+	this->state = DECEL;
+	this->brake = holdMode;
+	this->continous = 0;
+	this->stepDelay = 2;
+	
+	sei();
+
+	PORTD &= ~(1 << 4);
+	TCCR3B |= (1 << CS30);
 }
 
 void uStepperSLite::stop(bool brake)
@@ -911,7 +909,7 @@ void uStepperSLite::softStop(bool holdMode)
 	{
 		return;		//Drop in feature is activated. just return since this function makes no sense with drop in activated!
 	}
-	
+
 	cli();
 	curVel = this->currentPidSpeed;
 	decelSteps = (uint32_t)((curVel*curVel)/(2.0*this->acceleration));
