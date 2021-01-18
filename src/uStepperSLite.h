@@ -476,6 +476,8 @@ public:
 	* running in (Normal, Drop-in or PID)*/
 	uint8_t mode;
 
+	volatile uint8_t stepGeneratorDirectionPid;//offset 21
+
 	/** This variable contains the number of steps commanded by
 	* external controller, in case of dropin feature */
 	volatile int32_t stepCnt;	
@@ -547,7 +549,7 @@ public:
 
 	/** This variable holds the current PID algorithm speed*/	
 	volatile float currentPidSpeed;
-
+	volatile float currentPidSpeedDebug = 0.0;
 	/** This variable holds the current PID algorithm acceleration*/	
 	volatile float currentPidAcceleration;
 
