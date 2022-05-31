@@ -856,26 +856,7 @@ void uStepperSLite::runContinous(bool dir)
 			pointer->stepDelay = 20000;
 		}
 		this->state = tempState;
-		Serial.print("\r\nstate: ");
-    Serial.println(this->state);
 	sei();
-	Serial.print("\r\nstate: ");
-    Serial.println(this->state);
-    Serial.print(" StepsSinceReset: ");
-    Serial.println(this->stepsSinceReset);
-    Serial.print(" CurrentSpeed: ");
-    Serial.println(this->currentPidSpeed);
-    Serial.print(" currentPidAcceleration: ");
-    Serial.println(this->currentPidAcceleration);
-    Serial.print(" Dir: ");
-    Serial.println(this->direction);
-	Serial.print(" Dir: ");
-    Serial.println(this->stepGeneratorDirection);
-	Serial.print(" this->decelToAccelThreshold: ");
-    Serial.println(this->decelToAccelThreshold);
-    Serial.print(" this->accelToCruiseThreshold: ");
-    Serial.println(this->accelToCruiseThreshold);
-	Serial.println("");
 
 	PORTD &= ~(1 << 4);
 	TCCR3B |= (1 << CS30);
@@ -1095,26 +1076,8 @@ void uStepperSLite::moveSteps(int32_t steps, bool dir, bool holdMode)
 		this->targetPosition = this->decelToStopThreshold;
 		this->brake = holdMode;
 		
-	Serial.print("\r\nstate: ");
-    Serial.println(this->state);
 	sei();
-	Serial.print("\r\nstate: ");
-    Serial.println(this->state);
-    Serial.print(" StepsSinceReset: ");
-    Serial.println(this->stepsSinceReset);
-    Serial.print(" CurrentSpeed: ");
-    Serial.println(this->currentPidSpeed);
-    Serial.print(" currentPidAcceleration: ");
-    Serial.println(this->currentPidAcceleration);
-    Serial.print(" Dir: ");
-    Serial.println(this->direction);
-	Serial.print(" Dir: ");
-    Serial.println(this->stepGeneratorDirection);
-	Serial.print(" this->decelToAccelThreshold: ");
-    Serial.println(this->decelToAccelThreshold);
-    Serial.print(" this->accelToCruiseThreshold: ");
-    Serial.println(this->accelToCruiseThreshold);
-	Serial.println("");
+	
 
 	PORTD &= ~(1 << 4);
 	TCCR3B |= (1 << CS30);
@@ -1141,26 +1104,9 @@ void uStepperSLite::hardStop(bool holdMode)
 	this->brake = holdMode;
 	this->continous = 0;
 	this->stepDelay = 2;
-	Serial.print("\r\nstate: ");
-    Serial.println(this->state);
+	
 	sei();
-	Serial.print("\r\nstate: ");
-    Serial.println(this->state);
-    Serial.print(" StepsSinceReset: ");
-    Serial.println(this->stepsSinceReset);
-    Serial.print(" CurrentSpeed: ");
-    Serial.println(this->currentPidSpeed);
-    Serial.print(" currentPidAcceleration: ");
-    Serial.println(this->currentPidAcceleration);
-    Serial.print(" Dir: ");
-    Serial.println(this->direction);
-	Serial.print(" Dir: ");
-    Serial.println(this->stepGeneratorDirection);
-	Serial.print(" this->decelToAccelThreshold: ");
-    Serial.println(this->decelToAccelThreshold);
-    Serial.print(" this->accelToCruiseThreshold: ");
-    Serial.println(this->accelToCruiseThreshold);
-	Serial.println("");
+	
 	PORTD &= ~(1 << 4);
 	TCCR3B |= (1 << CS30);
 }
@@ -1214,26 +1160,9 @@ void uStepperSLite::softStop(bool holdMode)
 	{
 		pointer->stepDelay = 20000;
 	}
-	Serial.print("\r\nstate: ");
-    Serial.println(this->state);
+	
 	sei();
-	Serial.print("\r\nstate: ");
-    Serial.println(this->state);
-    Serial.print(" StepsSinceReset: ");
-    Serial.println(this->stepsSinceReset);
-    Serial.print(" CurrentSpeed: ");
-    Serial.println(this->currentPidSpeed);
-    Serial.print(" currentPidAcceleration: ");
-    Serial.println(this->currentPidAcceleration);
-    Serial.print(" Dir: ");
-    Serial.println(this->direction);
-	Serial.print(" Dir: ");
-    Serial.println(this->stepGeneratorDirection);
-	Serial.print(" this->decelToAccelThreshold: ");
-    Serial.println(this->decelToAccelThreshold);
-    Serial.print(" this->accelToCruiseThreshold: ");
-    Serial.println(this->accelToCruiseThreshold);
-	Serial.println("");
+	
 
 	PORTD &= ~(1 << 4);
 	TCCR3B |= (1 << CS30);
